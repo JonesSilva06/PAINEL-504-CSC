@@ -1,0 +1,3012 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Painel de Controle CSC 504 | NextGen Edition</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f4ff',
+                            100: '#e0e8ff',
+                            200: '#c7d2fe',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e',
+                            cyan: '#06b6d4',
+                            violet: '#8b5cf6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #090d16;
+            --panel-bg: rgba(15, 23, 42, 0.75);
+            --panel-solid: #0f172a;
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-hover: rgba(30, 41, 59, 0.8);
+            --cell-ok-bg: rgba(16, 185, 129, 0.15);
+            --cell-ok-fg: #34d399;
+            --cell-no-bg: rgba(244, 63, 94, 0.15);
+            --cell-no-fg: #fb7185;
+        }
+
+        .light {
+            --bg-main: #f1f5f9;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-solid: #ffffff;
+            --panel-border: rgba(0, 0, 0, 0.08);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --card-hover: #f8fafc;
+            --cell-ok-bg: rgba(16, 185, 129, 0.12);
+            --cell-ok-fg: #059669;
+            --cell-no-bg: rgba(225, 29, 72, 0.12);
+            --cell-no-fg: #e11d48;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 15px 35px -10px rgba(99, 102, 241, 0.15);
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid transparent;
+        }
+        .cal-day:hover { background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); }
+        .cal-day.has-data { border-color: rgba(16, 185, 129, 0.5); color: #34d399; font-weight: 700; }
+        .cal-day.selected { background: #6366f1 !important; color: white !important; font-weight: 800; border-color: transparent; }
+        .cal-day.dim { opacity: 0.3; }
+
+        .matrix-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.8125rem; }
+        .matrix-table th, .matrix-table td {
+            padding: 0.625rem 0.75rem;
+            border-bottom: 1px solid var(--panel-border);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .matrix-table th {
+            position: sticky;
+            top: 0;
+            background: var(--panel-solid);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            z-index: 10;
+        }
+        .matrix-table th:first-child, .matrix-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: var(--panel-solid);
+            text-align: left;
+            z-index: 11;
+        }
+        .matrix-table th:first-child { z-index: 12; }
+        .matrix-table td.cell-ok { background: var(--cell-ok-bg); color: var(--cell-ok-fg); font-weight: 700; }
+        .matrix-table td.cell-no { background: var(--cell-no-bg); color: var(--cell-no-fg); font-weight: 700; }
+        .matrix-table td.cell-empty { color: var(--text-muted); opacity: 0.4; }
+
+        .toast-box {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999;
+            display: flex; flex-direction: column; gap: 0.5rem;
+        }
+        .toast-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.875rem 1.25rem; border-radius: 0.75rem;
+            background: var(--panel-solid); border: 1px solid var(--panel-border);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+            font-size: 0.875rem; color: var(--text-main);
+            animation: slideUp 0.25s ease-out;
+            transition: all 0.25s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="h-full overflow-x-hidden antialiased selection:bg-brand-500 selection:text-white">
+
+<div id="app" class="min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-accent-emerald flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-bolt text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg leading-tight tracking-tight text-white flex items-center gap-2">
+                        CSC 504 <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">NextGen</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">Gestão de Produção, Rastreabilidade & Performance Operacional</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs">
+                    <i class="fa-solid fa-calendar-day text-brand-400"></i>
+                    <span class="text-slate-400">Dia:</span>
+                    <strong id="topDayLbl" class="text-white font-bold">—</strong>
+                </div>
+
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs">
+                    <i class="fa-solid fa-clock text-accent-cyan"></i>
+                    <select id="turnoSelect" class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer">
+                        <option value="all" class="bg-slate-900">Todos os Turnos</option>
+                        <option value="t1" class="bg-slate-900">T1 — Manhã (06h–13h)</option>
+                        <option value="t2" class="bg-slate-900">T2 — Tarde (14h–21h)</option>
+                        <option value="t3" class="bg-slate-900">T3 — Noite (22h–05h)</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs">
+                    <i class="fa-solid fa-hourglass-half text-amber-400"></i>
+                    <span class="text-slate-400">Intervalo:</span>
+                    <select id="startHourSelect" class="bg-transparent text-white font-bold focus:outline-none cursor-pointer">
+                    </select>
+                    <span class="text-slate-500">até</span>
+                    <select id="endHourSelect" class="bg-transparent text-white font-bold focus:outline-none cursor-pointer">
+                    </select>
+                </div>
+
+                <button id="btnClearFilters" class="px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 font-semibold text-xs hover:bg-rose-500/30 transition-all flex items-center gap-1.5" title="Limpar exclusivamente as metas manuais de pedidos e peças">
+                    <i class="fa-solid fa-eraser text-xs"></i>
+                    <span>Limpar Metas</span>
+                </button>
+
+                <button id="btnLoadDemoData" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-white/10 text-slate-300 font-semibold text-xs hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1.5" title="Carregar dados fictícios para teste">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    <span class="hidden md:inline">Dados Demo</span>
+                </button>
+
+                <label class="cursor-pointer flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-semibold text-xs shadow-md hover:brightness-110 active:scale-95 transition-all">
+                    <i class="fa-solid fa-file-import"></i>
+                    <span class="hidden sm:inline">Importar XLSX/CSV</span>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden"/>
+                </label>
+
+                <button id="toggleDrawerBtn" class="p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 transition-all" title="Parâmetros & Histórico">
+                    <i class="fa-solid fa-sliders text-base"></i>
+                </button>
+
+                <button id="themeToggleBtn" class="p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 transition-all" title="Alternar Tema">
+                    <i class="fa-solid fa-moon text-base"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- Executive KPIs Dashboard Grid -->
+        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5" id="kpiContainer">
+        </section>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-900/90 border border-white/10 overflow-x-auto scrollbar-none">
+            <button data-tab="visao" class="tab-btn active px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap bg-brand-600 text-white shadow-md">
+                <i class="fa-solid fa-chart-line"></i> Visão Geral
+            </button>
+            <button data-tab="rank" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-trophy"></i> Ranking
+            </button>
+            <button data-tab="users" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-users"></i> Individual
+            </button>
+            <button data-tab="loginUsers" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-amber-400 hover:text-amber-300 hover:bg-white/5">
+                <i class="fa-solid fa-user-gear"></i> Login Usuários
+            </button>
+            <button data-tab="periodo" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-calendar-range"></i> Períodos
+            </button>
+            <button data-tab="matrizOrd" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-table-cells"></i> Pedidos HXH
+            </button>
+            <button data-tab="matrizIt" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-boxes-packing"></i> Itens HXH
+            </button>
+            <button data-tab="ocio" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-clock-rotate-left"></i> Ociosidades
+            </button>
+            <button data-tab="report" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-file-invoice"></i> Relatório Final
+            </button>
+            <button data-tab="tools" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-magnifying-glass"></i> Rastreabilidade
+            </button>
+        </nav>
+
+        <!-- Operators Filter Component -->
+        <section class="glass-card p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                    <i class="fa-solid fa-filter text-brand-400"></i>
+                    <span>Filtrar Operadores Ativos:</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="relative flex-1 min-w-[200px]">
+                        <input id="userSearchInput" type="text" placeholder="Buscar operador..." class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"/>
+                        <i class="fa-solid fa-search absolute right-3 top-2.5 text-slate-500 text-xs"></i>
+                    </div>
+                    <button id="btnSelAll" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700">Todos</button>
+                    <button id="btnSelNone" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700">Limpar</button>
+                    <button id="btnSelT1" class="px-2.5 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-semibold hover:bg-amber-500/30">Só T1</button>
+                    <button id="btnSelT2" class="px-2.5 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs font-semibold hover:bg-indigo-500/30">Só T2</button>
+                    <button id="btnSelT3" class="px-2.5 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 text-xs font-semibold hover:bg-purple-500/30">Só T3</button>
+                    
+                    <button id="btnDedupOE" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 flex items-center gap-1.5 transition-all" title="Alternar tratamento de Ordem de Entrada duplicada">
+                        <i class="fa-solid fa-copy text-xs"></i>
+                        <span>OE: <strong id="lblDedupOE">1x Apenas</strong></span>
+                    </button>
+                </div>
+            </div>
+            <div id="userChipsWrapper" class="flex flex-col gap-2.5 max-h-52 overflow-y-auto pt-2 border-t border-white/5">
+            </div>
+        </section>
+
+        <!-- Main Tab Panels -->
+        <main id="tabPanels" class="space-y-6">
+
+            <!-- TAB 1: VISÃO GERAL -->
+            <div data-panel="visao" class="space-y-6">
+                <div class="glass-card p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-semibold text-slate-400">Modo de Visualização:</span>
+                        <select id="chartTypeSelect" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white font-bold focus:outline-none">
+                            <option value="line">Linhas Continuum</option>
+                            <option value="bar">Colunas Agrupadas</option>
+                        </select>
+                    </div>
+                    <div class="text-xs text-slate-400 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span>Atualização contínua de telemetria</span>
+                    </div>
+                </div>
+
+                <!-- Goal Management Card (Pedidos) -->
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-bullseye text-amber-400"></i> Meta de Produção Pedidos por Turno & Geral
+                        </h3>
+                        <button id="btnResetAllOrderGoals" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 font-semibold" title="Restaurar metas de pedidos para o modo automático">
+                            <i class="fa-solid fa-rotate-left text-amber-400"></i> Reset Pedidos
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">META T1</span>
+                                <button id="btnAutoMetaT1" class="text-[10px] text-slate-500 hover:text-amber-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaT1" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-amber-400 focus:outline-none focus:border-amber-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">pedidos</span>
+                            </div>
+                            <span id="lblCountT1" class="text-[11px] text-slate-500 block">0 oper. alocados no T1</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-indigo-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">META T2</span>
+                                <button id="btnAutoMetaT2" class="text-[10px] text-slate-500 hover:text-indigo-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaT2" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-indigo-400 focus:outline-none focus:border-indigo-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">pedidos</span>
+                            </div>
+                            <span id="lblCountT2" class="text-[11px] text-slate-500 block">0 oper. alocados no T2</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400">META T3</span>
+                                <button id="btnAutoMetaT3" class="text-[10px] text-slate-500 hover:text-purple-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaT3" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-purple-400 focus:outline-none focus:border-purple-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">pedidos</span>
+                            </div>
+                            <span id="lblCountT3" class="text-[11px] text-slate-500 block">0 oper. alocados no T3</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">META GERAL</span>
+                                <button id="btnAutoMetaGeral" class="text-[10px] text-slate-500 hover:text-emerald-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaGeral" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-emerald-400 focus:outline-none focus:border-emerald-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">pedidos</span>
+                            </div>
+                            <span id="lblCountGeral" class="text-[11px] text-slate-500 block">Capacidade Total / Dia</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goal Management Card (Peças) -->
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-boxes-stacked text-emerald-400"></i> Metas de Produção Peças por Turno & Geral
+                        </h3>
+                        <button id="btnResetAllItemGoals" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 font-semibold" title="Restaurar metas de peças para o modo automático">
+                            <i class="fa-solid fa-rotate-left text-emerald-400"></i> Reset Peças
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">META PEÇAS T1</span>
+                                <button id="btnAutoMetaPeçasT1" class="text-[10px] text-slate-500 hover:text-amber-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaPeçasT1" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-amber-400 focus:outline-none focus:border-amber-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">peças</span>
+                            </div>
+                            <span id="lblCountPeçasT1" class="text-[11px] text-slate-500 block">0 oper. alocados no T1</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-indigo-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">META PEÇAS T2</span>
+                                <button id="btnAutoMetaPeçasT2" class="text-[10px] text-slate-500 hover:text-indigo-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaPeçasT2" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-indigo-400 focus:outline-none focus:border-indigo-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">peças</span>
+                            </div>
+                            <span id="lblCountPeçasT2" class="text-[11px] text-slate-500 block">0 oper. alocados no T2</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400">META PEÇAS T3</span>
+                                <button id="btnAutoMetaPeçasT3" class="text-[10px] text-slate-500 hover:text-purple-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaPeçasT3" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-purple-400 focus:outline-none focus:border-purple-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">peças</span>
+                            </div>
+                            <span id="lblCountPeçasT3" class="text-[11px] text-slate-500 block">0 oper. alocados no T3</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">META PEÇAS GERAL</span>
+                                <button id="btnAutoMetaPeçasGeral" class="text-[10px] text-slate-500 hover:text-emerald-300 font-semibold underline">Auto</button>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <input id="inputMetaPeçasGeral" type="number" min="0" placeholder="0" class="w-28 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-2xl font-black text-emerald-400 focus:outline-none focus:border-emerald-400"/>
+                                <span class="text-xs text-slate-400 font-semibold">peças</span>
+                            </div>
+                            <span id="lblCountPeçasGeral" class="text-[11px] text-slate-500 block">Capacidade Total / Dia</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shift Hourly Averages Summary -->
+                <div class="glass-card p-5 space-y-3">
+                    <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-amber-400"></i> Médias Realizadas por Hora por Turno
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-slate-950/60 p-4 rounded-xl border border-white/5 space-y-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">MÉDIA/HORA — T1</span>
+                            <div id="avgT1Val" class="text-3xl font-black text-amber-400">0</div>
+                        </div>
+                        <div class="bg-slate-950/60 p-4 rounded-xl border border-white/5 space-y-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">MÉDIA/HORA — T2</span>
+                            <div id="avgT2Val" class="text-3xl font-black text-indigo-400">0</div>
+                        </div>
+                        <div class="bg-slate-950/60 p-4 rounded-xl border border-white/5 space-y-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">MÉDIA/HORA — T3</span>
+                            <div id="avgT3Val" class="text-3xl font-black text-purple-400">0</div>
+                        </div>
+                        <div class="bg-slate-950/60 p-4 rounded-xl border border-white/5 space-y-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">MÉDIA/HORA — TOTAL</span>
+                            <div id="avgTotalVal" class="text-3xl font-black text-white">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hourly Evolution Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-card p-5 space-y-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-brand-400"></i> Pedidos por Hora
+                        </h3>
+                        <div class="h-72"><canvas id="chartOrdersTime"></canvas></div>
+                    </div>
+                    <div class="glass-card p-5 space-y-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-emerald-400"></i> Itens por Hora
+                        </h3>
+                        <div class="h-72"><canvas id="chartItemsTime"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: RANKING -->
+            <div data-panel="rank" class="space-y-6 hidden">
+                <div id="podiumGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-card p-5 space-y-3">
+                        <h3 class="font-bold text-sm text-white">🏆 Ranking de Pedidos no Período</h3>
+                        <div class="h-80"><canvas id="chartRankOrders"></canvas></div>
+                    </div>
+                    <div class="glass-card p-5 space-y-3">
+                        <h3 class="font-bold text-sm text-white">📦 Ranking de Itens no Período</h3>
+                        <div class="h-80"><canvas id="chartRankItems"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: INDIVIDUAL OPERATORS -->
+            <div data-panel="users" class="space-y-6 hidden">
+                <div class="glass-card p-4 flex flex-wrap justify-between items-center gap-4">
+                    <p class="text-xs text-slate-400">Análise individual de performance com curvas de produção e metas hora a hora por operador.</p>
+                    
+                    <div class="flex items-center gap-2.5 bg-slate-900/90 border border-white/10 px-3 py-1.5 rounded-xl shadow-inner">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-down-wide-short text-brand-400"></i>
+                            <span>Ordenar por:</span>
+                        </span>
+                        <select id="userSortSelect" class="bg-slate-950 border border-white/10 rounded-lg px-3 py-1 text-xs text-white font-bold focus:outline-none focus:border-brand-500 cursor-pointer transition-all hover:border-brand-500/50">
+                            <option value="orders_desc" class="bg-slate-900 text-white">📦 Mais Pedidos (Maior → Menor)</option>
+                            <option value="items_desc" class="bg-slate-900 text-white">🏷️ Mais Itens / Peças (Maior → Menor)</option>
+                            <option value="name_asc" class="bg-slate-900 text-white">🔤 Nome (A–Z)</option>
+                            <option value="orders_asc" class="bg-slate-900 text-white">📉 Menos Pedidos (Menor → Maior)</option>
+                            <option value="items_asc" class="bg-slate-900 text-white">📉 Menos Itens / Peças (Menor → Maior)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="individualUsersGrid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                </div>
+            </div>
+
+            <!-- TAB 4: LOGIN USERS CONFIG -->
+            <div data-panel="loginUsers" class="space-y-6 hidden">
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                                <i class="fa-solid fa-user-gear text-amber-400"></i> Gestão de Logins, Nomes & Metas Individuais
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1">
+                                Defina o Nome Real exibido para cada Login do sistema e personalize as metas individuais de Pedidos/h e Peças/h.
+                            </p>
+                        </div>
+                        <button id="btnAutoDetectLogins" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Sincronizar Logins da Planilha
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-white/10 max-h-[550px]">
+                        <table class="matrix-table w-full" id="loginUsersTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-left">Login do Sistema</th>
+                                    <th class="text-left">Nome Exibido no Painel</th>
+                                    <th>Meta OE (Ped/h)</th>
+                                    <th>Meta Peças (It/h)</th>
+                                    <th>Turno Automático</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loginUsersTbody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-slate-500 py-6">Nenhum dado importado.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: HISTÓRICO DE PERÍODOS -->
+            <div data-panel="periodo" class="space-y-6 hidden">
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <span id="periodRangeLabel" class="text-xs text-brand-400 font-bold">Histórico Geral de Registros Salvos</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="glass-card p-4 space-y-2">
+                            <h4 class="font-bold text-xs text-slate-300">Evolução de Pedidos por Dia</h4>
+                            <div class="h-64"><canvas id="chartPeriodOrders"></canvas></div>
+                        </div>
+                        <div class="glass-card p-4 space-y-2">
+                            <h4 class="font-bold text-xs text-slate-300">Evolução de Itens por Dia</h4>
+                            <div class="h-64"><canvas id="chartPeriodItems"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: MATRIZ PEDIDOS HXH -->
+            <div data-panel="matrizOrd" class="space-y-6 hidden">
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                                <i class="fa-solid fa-table text-brand-400"></i> Matriz Interativa de PEDIDOS Hora a Hora
+                            </h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btnExportOrdCsv" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+                                <i class="fa-solid fa-file-csv mr-1"></i> Exportar CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-white/10 max-h-[500px]">
+                        <table id="matrixOrdersTable" class="matrix-table"></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: MATRIZ ITENS HXH -->
+            <div data-panel="matrizIt" class="space-y-6 hidden">
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                                <i class="fa-solid fa-boxes-stacked text-accent-emerald"></i> Matriz Interativa de ITENS Hora a Hora
+                            </h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btnExportItCsv" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+                                <i class="fa-solid fa-file-csv mr-1"></i> Exportar CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-white/10 max-h-[500px]">
+                        <table id="matrixItemsTable" class="matrix-table"></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 8: OCIOSIDADES -->
+            <div data-panel="ocio" class="space-y-6 hidden">
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                                <i class="fa-solid fa-user-clock text-amber-400"></i> Detecção Automática de Ociosidades e Gaps
+                            </h3>
+                            <p class="text-xs text-slate-400">
+                                Desconsidera automaticamente as janelas de refeição das <span class="text-brand-400 font-bold">02h, 11h e 18h</span>.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs text-slate-400 flex items-center gap-2">
+                                Tolerar Limite (min):
+                                <input type="number" id="ocioLimitMin" value="10" min="1" class="w-16 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-bold"/>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-white/10">
+                        <table id="ocioTable" class="matrix-table"></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 9: RELATÓRIO EXECUTIVO -->
+            <div data-panel="report" class="space-y-6 hidden">
+                <div class="glass-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                                <i class="fa-solid fa-file-invoice text-accent-cyan"></i> Gerador de Relatório Executivo HD (1920x1080)
+                            </h3>
+                        </div>
+                        <button id="btnDownloadReportPng" class="px-4 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-bold text-xs shadow-lg hover:brightness-110">
+                            <i class="fa-solid fa-download mr-1.5"></i> Baixar Relatório (PNG)
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/60 p-3 rounded-xl border border-white/5">
+                        <label class="text-xs text-slate-400">Título:
+                            <input id="repTitleInput" type="text" value="RELATÓRIO OPERACIONAL | CSC 504" class="w-full mt-1 bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white"/>
+                        </label>
+                        <div class="flex items-end">
+                            <button id="btnRefreshReport" class="w-full py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+                                <i class="fa-solid fa-rotate mr-1"></i> Atualizar Canvas
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/9] bg-slate-950 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+                        <canvas id="reportCanvas" class="w-full h-full object-contain"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 10: RASTREABILIDADE -->
+            <div data-panel="tools" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-5 space-y-4">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-barcode text-brand-400"></i> Localizar UZ Destino por Item
+                        </h3>
+                        <div class="flex gap-2">
+                            <input id="toolItemCodeInput" type="text" placeholder="Digite o código do item..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"/>
+                            <button id="btnSearchToolItem" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-bold text-xs hover:bg-brand-500 transition-all">Buscar</button>
+                        </div>
+                        <div id="toolItemResult" class="text-xs text-slate-400"></div>
+                    </div>
+
+                    <div class="glass-card p-5 space-y-4">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-warehouse text-accent-emerald"></i> Consultar Itens por UZ Destino
+                        </h3>
+                        <div class="flex gap-2">
+                            <input id="toolUzInput" type="text" placeholder="Digite a UZ (ex: UZ-001)..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"/>
+                            <button id="btnSearchToolUz" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 transition-all">Buscar</button>
+                        </div>
+                        <div id="toolUzResult" class="text-xs text-slate-400"></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Sidebar Drawer: Calendar & DB Admin -->
+    <div id="sidebarDrawer" class="fixed inset-0 z-50 pointer-events-none opacity-0 transition-opacity duration-300">
+        <div id="drawerOverlay" class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"></div>
+        <aside class="absolute top-0 right-0 h-full w-80 max-w-full bg-slate-900 border-l border-white/10 p-5 space-y-6 overflow-y-auto pointer-events-auto transition-transform transform translate-x-full duration-300 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-brand-400"></i> Parâmetros & Calendário
+                </h3>
+                <button id="closeDrawerBtn" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="font-semibold text-slate-300">Calendário de Dados</span>
+                    <span id="drawerCalCount" class="text-brand-400 font-bold">0 dia(s)</span>
+                </div>
+                <div class="flex items-center justify-between text-xs bg-slate-950 p-2 rounded-xl border border-white/5">
+                    <button id="calPrevMonth" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <span id="calMonthYearLbl" class="font-bold text-white">—</span>
+                    <button id="calNextMonth" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <div class="cal-grid" id="calGridContainer"></div>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t border-white/10">
+                <h4 class="font-bold text-xs text-slate-200">Gerenciamento de Dados</h4>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <button id="btnExportBackup" class="py-2 rounded-xl bg-slate-800 text-slate-200 font-semibold hover:bg-slate-700">Exportar JSON</button>
+                    <label class="cursor-pointer py-2 rounded-xl bg-slate-800 text-slate-200 font-semibold hover:bg-slate-700 text-center">
+                        Importar JSON
+                        <input type="file" id="importBackupInput" accept=".json" class="hidden"/>
+                    </label>
+                </div>
+                <button id="btnClearDatabase" class="w-full py-2 rounded-xl bg-rose-500/20 text-rose-300 font-semibold hover:bg-rose-500/30 text-xs">
+                    <i class="fa-solid fa-trash mr-1"></i> Apagar Banco IndexedDB
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-white/10 bg-slate-950/60 p-4 text-center text-xs text-slate-500">
+        <p class="font-medium">CSC 504 NextGen Dashboard — <span class="text-slate-400 font-bold">João Vitor Nascimento Silva</span> — CD504 CSC</p>
+        <p class="text-[10px] text-slate-600 mt-1">100% Processamento Local no Navegador com IndexedDB. Privacidade e Alta Performance Garantidas.</p>
+    </footer>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-box"></div>
+
+<!-- Loader Overlay -->
+<div id="loaderOverlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md text-white space-y-4">
+    <div class="w-12 h-12 rounded-full border-4 border-brand-500/20 border-t-brand-500 animate-spin"></div>
+    <p id="loaderText" class="text-xs font-semibold text-slate-300">Carregando...</p>
+</div>
+
+<!-- JavaScript Logic -->
+<script>
+// --- IndexedDB Local Storage Layer ---
+const DB_NAME = 'painel_csc_v2', DB_VER = 1;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('days')) {
+                db.createObjectStore('days', { keyPath: 'date' });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbPut(record) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('days', 'readwrite');
+        tx.objectStore('days').put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function dbGet(date) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('days', 'readonly');
+        const req = tx.objectStore('days').get(date);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbAll() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('days', 'readonly');
+        const req = tx.objectStore('days').getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbClear() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('days', 'readwrite');
+        tx.objectStore('days').clear();
+        tx.oncomplete = () => resolve();
+    });
+}
+
+// --- LocalStorage User Mappings & Custom Ordering ---
+const STORAGE_USER_MAP_KEY = 'csc504_user_mappings_v1';
+
+function loadUserMappingsFromStorage() {
+    try {
+        const raw = localStorage.getItem(STORAGE_USER_MAP_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch(e) {
+        return {};
+    }
+}
+
+function saveUserMappingsToStorage(mapObj) {
+    try {
+        localStorage.setItem(STORAGE_USER_MAP_KEY, JSON.stringify(mapObj));
+    } catch(e){}
+}
+
+const STORAGE_CUSTOM_ORDER_KEY = 'csc504_custom_user_order_v1';
+
+function loadCustomUserOrderFromStorage() {
+    try {
+        const raw = localStorage.getItem(STORAGE_CUSTOM_ORDER_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch(e) {
+        return [];
+    }
+}
+
+function saveCustomUserOrderToStorage(arr) {
+    try {
+        localStorage.setItem(STORAGE_CUSTOM_ORDER_KEY, JSON.stringify(arr));
+    } catch(e){}
+}
+
+const userMappings = loadUserMappingsFromStorage();
+
+function getUserDisplayName(rawLogin) {
+    if (!rawLogin) return '';
+    if (userMappings[rawLogin] && userMappings[rawLogin].displayName) {
+        return userMappings[rawLogin].displayName;
+    }
+    return rawLogin;
+}
+
+function getUserMetaOrd(rawLogin) {
+    if (userMappings[rawLogin] && userMappings[rawLogin].metaOrd != null) {
+        return userMappings[rawLogin].metaOrd;
+    }
+    return 25;
+}
+
+function getUserMetaIt(rawLogin) {
+    if (userMappings[rawLogin] && userMappings[rawLogin].metaIt != null) {
+        return userMappings[rawLogin].metaIt;
+    }
+    return 100;
+}
+
+// Global Application State
+const state = {
+    day: null,
+    data: null,
+    selectedUsers: new Set(),
+    turno: 'all',
+    startHour: 0,
+    endHour: 23,
+    calMonth: new Date(),
+    activeTab: 'visao',
+    chartType: 'line',
+    dedupOE: true,
+    userSort: 'orders_desc',
+    customUserOrder: loadCustomUserOrderFromStorage(),
+    manualGoals: { t1: null, t2: null, t3: null, geral: null },
+    manualItemGoals: { t1: null, t2: null, t3: null, geral: null }
+};
+
+// Toast Notifications
+function showToast(msg, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast-item';
+    let icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-emerald-400"></i>' : (type === 'error' ? '<i class="fa-solid fa-circle-xmark text-rose-400"></i>' : '<i class="fa-solid fa-circle-info text-brand-400"></i>');
+    toast.innerHTML = `${icon} <span>${msg}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => toast.remove(), 250);
+    }, 3000);
+}
+
+// Normalizer and Column Locator
+function normHeader(h) {
+    return String(h || '').trim().toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/[áàâã]/g, 'a')
+        .replace(/[éê]/g, 'e')
+        .replace(/[í]/g, 'i')
+        .replace(/[óôõ]/g, 'o')
+        .replace(/ú/g, 'u')
+        .replace(/ç/g, 'c');
+}
+
+function findCol(headers, ...names) {
+    for (const n of names) {
+        const k = normHeader(n);
+        const i = headers.findIndex(h => normHeader(h) === k);
+        if (i >= 0) return i;
+    }
+    return -1;
+}
+
+// Robust Excel Parsers for Dates, Hours and Seconds
+function parseExcelDate(v) {
+    if (v == null || v === '') return null;
+    if (v instanceof Date) {
+        if (isNaN(v.getTime())) return null;
+        return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+    }
+    if (typeof v === 'number') {
+        const d = XLSX.SSF.parse_date_code(v);
+        if (!d) return null;
+        return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+    }
+    const s = String(v).trim();
+    
+    // ISO Format YYYY-MM-DD
+    let isoMatch = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+    if (isoMatch) {
+        let [_, y, mo, d] = isoMatch;
+        return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    
+    // BR Format DD/MM/YYYY
+    let brMatch = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+    if (brMatch) {
+        let [_, d, mo, y] = brMatch;
+        if (y.length === 2) y = '20' + y;
+        return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return null;
+}
+
+function parseExcelHour(v) {
+    if (v == null || v === '') return null;
+    if (v instanceof Date) return v.getHours();
+    if (typeof v === 'number') {
+        if (Number.isInteger(v) && v >= 0 && v <= 23) return v;
+        const f = v - Math.floor(v);
+        return Math.floor(Math.round(f * 86400) / 3600) % 24;
+    }
+    const s = String(v).trim();
+    const m = s.match(/(\d{1,2}):(\d{2})/);
+    return m ? parseInt(m[1], 10) % 24 : null;
+}
+
+function parseExcelSec(v) {
+    if (v == null || v === '') return null;
+    if (v instanceof Date) return v.getHours() * 3600 + v.getMinutes() * 60 + v.getSeconds();
+    if (typeof v === 'number') {
+        const f = v - Math.floor(v);
+        return Math.round(f * 86400);
+    }
+    const s = String(v).trim();
+    const m = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    return (parseInt(m[1], 10) % 24) * 3600 + parseInt(m[2], 10) * 60 + (m[3] ? parseInt(m[3], 10) : 0);
+}
+
+// Excel/CSV File Processing Handler with Multi-row Header Scanning
+document.getElementById('fileInput').onchange = async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    
+    document.getElementById('loaderOverlay').classList.remove('hidden');
+    document.getElementById('loaderOverlay').classList.add('flex');
+    document.getElementById('loaderText').innerText = 'Processando planilha...';
+
+    try {
+        const buf = await f.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+        
+        const sheetName = wb.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: true });
+        
+        if (!rows.length) throw new Error('Planilha sem dados.');
+
+        // Multi-line scan to locate header row
+        let headerRowIdx = -1;
+        let cUser = -1, cDF = -1, cHF = -1, cOE = -1, cQt = -1, cItem = -1, cUZd = -1;
+
+        for (let rIdx = 0; rIdx < Math.min(15, rows.length); rIdx++) {
+            const candidateHeaders = rows[rIdx] || [];
+            if (!Array.isArray(candidateHeaders)) continue;
+
+            const tu = findCol(candidateHeaders, 'usuario', 'usuario final', 'operador', 'colaborador', 'matricula', 'user', 'login', 'nome');
+            const tdf = findCol(candidateHeaders, 'data final', 'data fim', 'data conclusao', 'data', 'dt final', 'dt_final', 'date');
+            const thf = findCol(candidateHeaders, 'hora final', 'hora fim', 'hora conclusao', 'hora', 'hr final', 'hr_final', 'time');
+
+            if (tu >= 0 && (tdf >= 0 || thf >= 0)) {
+                headerRowIdx = rIdx;
+                cUser = tu;
+                cDF = tdf >= 0 ? tdf : findCol(candidateHeaders, 'data');
+                cHF = thf >= 0 ? thf : findCol(candidateHeaders, 'hora');
+                cOE = findCol(candidateHeaders, 'ordem de entrada', 'ordem entrada', 'oe', 'ordem', 'num oe', 'n oe', 'documento', 'pedido');
+                cQt = findCol(candidateHeaders, 'quantidade', 'qtd', 'qtde', 'qtd itens', 'qtde de itens', 'quantidade de itens', 'qtd pçs', 'qtd pecas', 'volume');
+                cItem = findCol(candidateHeaders, 'item', 'codigo item', 'cod item', 'sku', 'produto', 'material');
+                cUZd = findCol(candidateHeaders, 'uz destino', 'uz_destino', 'uz', 'destino', 'local destino', 'posicao');
+                break;
+            }
+        }
+
+        if (headerRowIdx === -1 || cUser < 0 || cDF < 0) {
+            throw new Error('Não foi possível identificar o cabeçalho. Certifique-se de que a planilha possui colunas de Usuário e Data.');
+        }
+
+        const byDate = {};
+
+        for (let i = headerRowIdx + 1; i < rows.length; i++) {
+            const r = rows[i];
+            if (!r) continue;
+            const date = parseExcelDate(r[cDF]);
+            if (!date) continue;
+            
+            const hour = cHF >= 0 ? parseExcelHour(r[cHF]) : 0;
+            if (hour == null) continue;
+            
+            const sec = cHF >= 0 ? parseExcelSec(r[cHF]) : 0;
+            const user = String(r[cUser] || '').trim();
+            if (!user) continue;
+            
+            const qty = Number(r[cQt] || 1) || 1;
+            const oe = cOE >= 0 && r[cOE] != null ? String(r[cOE]).trim() : '';
+
+            if (!byDate[date]) byDate[date] = { users: {}, items: [] };
+            const u = byDate[date].users[user] || (byDate[date].users[user] = { ord: Array(24).fill(0), it: Array(24).fill(0), secs: [], rawRows: [] });
+
+            u.ord[hour] += 1;
+            u.it[hour] += qty;
+            if (sec != null) u.secs.push(sec);
+            u.rawRows.push({ h: hour, oe: oe, qty: qty, s: sec });
+
+            if (cItem >= 0 && r[cItem] != null) {
+                byDate[date].items.push({
+                    it: String(r[cItem]).trim(),
+                    uz: cUZd >= 0 && r[cUZd] != null ? String(r[cUZd]).trim() : '',
+                    u: user,
+                    s: sec || 0,
+                    oe: oe
+                });
+            }
+        }
+
+        let importedCount = 0;
+        for (const date of Object.keys(byDate)) {
+            const existingRecord = await dbGet(date);
+            const users = existingRecord?.users || {};
+            const items = existingRecord?.items || [];
+
+            for (const [u, v] of Object.entries(byDate[date].users)) {
+                if (!users[u]) {
+                    users[u] = { ord: Array(24).fill(0), it: Array(24).fill(0), secs: [], rawRows: [] };
+                }
+                for (let h = 0; h < 24; h++) {
+                    users[u].ord[h] += v.ord[h];
+                    users[u].it[h] += v.it[h];
+                }
+                users[u].secs = [...users[u].secs, ...v.secs].sort((a, b) => a - b);
+                users[u].rawRows = [...users[u].rawRows, ...v.rawRows];
+
+                if (!userMappings[u]) {
+                    userMappings[u] = { displayName: u, metaOrd: 25, metaIt: 100 };
+                }
+                importedCount += v.rawRows.length;
+            }
+
+            const mergedItems = [...items, ...byDate[date].items];
+            await dbPut({ date, users, items: mergedItems });
+        }
+
+        saveUserMappingsToStorage(userMappings);
+
+        const dates = Object.keys(byDate).sort();
+        if (dates.length > 0) {
+            state.day = dates[dates.length - 1];
+        }
+        
+        showToast(`${importedCount} registros importados com sucesso!`, 'success');
+        await loadCurrentDayData();
+        await renderCalendar();
+    } catch (err) {
+        showToast(`Erro ao importar: ${err.message}`, 'error');
+    } finally {
+        e.target.value = ''; // Reset input to allow re-uploading same file
+        document.getElementById('loaderOverlay').classList.add('hidden');
+        document.getElementById('loaderOverlay').classList.remove('flex');
+    }
+};
+
+// Deduplication Helper for Single OE Count
+function getUserOrd(userObj) {
+    if (!userObj) return Array(24).fill(0);
+    if (!state.dedupOE || !userObj.rawRows || userObj.rawRows.length === 0) {
+        return userObj.ord || Array(24).fill(0);
+    }
+    
+    const result = Array(24).fill(0);
+    const hourlyOEs = Array.from({ length: 24 }, () => new Set());
+    const emptyOeCount = Array(24).fill(0);
+
+    for (const row of userObj.rawRows) {
+        if (row.oe) {
+            hourlyOEs[row.h].add(row.oe);
+        } else {
+            emptyOeCount[row.h]++;
+        }
+    }
+
+    for (let h = 0; h < 24; h++) {
+        result[h] = hourlyOEs[h].size + emptyOeCount[h];
+    }
+
+    return result;
+}
+
+// Shift Filter Mask Generator
+function getShiftFilter() {
+    return h => {
+        let inShift = true;
+        if (state.turno === 't1') inShift = (h >= 6 && h <= 13);
+        else if (state.turno === 't2') inShift = (h >= 14 && h <= 21);
+        else if (state.turno === 't3') inShift = (h >= 22 || h <= 5);
+
+        let inInterval = false;
+        if (state.startHour <= state.endHour) {
+            inInterval = (h >= state.startHour && h <= state.endHour);
+        } else {
+            inInterval = (h >= state.startHour || h <= state.endHour);
+        }
+
+        return inShift && inInterval;
+    };
+}
+
+// Automatic Operator Shift Classification
+function userTurno(ordArr) {
+    let m = 0, t = 0, n = 0;
+    for (let h = 6; h <= 13; h++) m += ordArr[h] || 0;
+    for (let h = 14; h <= 21; h++) t += ordArr[h] || 0;
+    for (let h = 0; h <= 5; h++) n += ordArr[h] || 0;
+    n += (ordArr[22] || 0) + (ordArr[23] || 0);
+    if (n > m && n > t) return 'T3';
+    return m >= t ? 'T1' : 'T2';
+}
+
+// Calendar Drawer Renderer
+async function renderCalendar() {
+    const all = await dbAll();
+    const datesSet = new Set(all.map(d => d.date));
+    document.getElementById('drawerCalCount').innerText = `${datesSet.size} dia(s)`;
+
+    const m = state.calMonth;
+    document.getElementById('calMonthYearLbl').innerText = m.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).toUpperCase();
+
+    const first = new Date(m.getFullYear(), m.getMonth(), 1);
+    const start = new Date(first);
+    start.setDate(1 - first.getDay());
+
+    const container = document.getElementById('calGridContainer');
+    container.innerHTML = '';
+
+    for (let i = 0; i < 42; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        const dayEl = document.createElement('div');
+        dayEl.className = 'cal-day';
+        dayEl.innerText = d.getDate();
+
+        if (d.getMonth() !== m.getMonth()) dayEl.classList.add('dim');
+        if (datesSet.has(iso)) dayEl.classList.add('has-data');
+        if (iso === state.day) dayEl.classList.add('selected');
+
+        dayEl.onclick = async () => {
+            state.day = iso;
+            await loadCurrentDayData();
+            await renderCalendar();
+        };
+        container.appendChild(dayEl);
+    }
+}
+
+document.getElementById('calPrevMonth').onclick = () => {
+    state.calMonth = new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() - 1, 1);
+    renderCalendar();
+};
+
+document.getElementById('calNextMonth').onclick = () => {
+    state.calMonth = new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() + 1, 1);
+    renderCalendar();
+};
+
+// Data Loader for Selected Day
+async function loadCurrentDayData() {
+    if (!state.day) {
+        state.data = null;
+        renderApp();
+        return;
+    }
+
+    const rec = await dbGet(state.day);
+    state.data = rec || null;
+
+    if (rec) {
+        const allUsers = Object.keys(rec.users || {});
+        state.selectedUsers = new Set(allUsers);
+
+        allUsers.forEach(u => {
+            if (!userMappings[u]) {
+                userMappings[u] = { displayName: u, metaOrd: 25, metaIt: 100 };
+            }
+        });
+        saveUserMappingsToStorage(userMappings);
+    }
+
+    renderApp();
+}
+
+let chartInstances = {};
+
+function destroyAllCharts() {
+    Object.keys(chartInstances).forEach(k => {
+        chartInstances[k]?.destroy?.();
+    });
+    chartInstances = {};
+}
+
+// Main Render Dispatcher
+function renderApp() {
+    document.getElementById('topDayLbl').innerText = state.day ? new Date(state.day + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+    destroyAllCharts();
+    renderUserChips();
+
+    if (!state.data) {
+        document.getElementById('kpiContainer').innerHTML = '<div class="col-span-full text-center text-xs text-slate-400 py-8">Nenhum dado importado para esta data. Clique em "Dados Demo" para testar!</div>';
+        return;
+    }
+
+    renderKPIs();
+    renderVisaoGeralTab();
+    renderRankingTab();
+    renderIndividualTab();
+    renderLoginUsersTab();
+    renderMatrices();
+    renderOciosidades();
+    renderPeriodosTab();
+    renderReportCanvas();
+}
+
+// Executive KPI Dashboard Calculation
+function renderKPIs() {
+    const mask = getShiftFilter();
+    let totOrd = 0, totIt = 0;
+    const users = state.data.users || {};
+
+    let activeCountInWindow = 0;
+
+    for (const u of state.selectedUsers) {
+        const v = users[u];
+        if (!v) continue;
+        const userOrdArr = getUserOrd(v);
+        let userHasProdInWindow = false;
+
+        for (let h = 0; h < 24; h++) {
+            if (mask(h)) {
+                const oVal = userOrdArr[h] || 0;
+                const iVal = v.it[h] || 0;
+                totOrd += oVal;
+                totIt += iVal;
+                if (oVal > 0 || iVal > 0) userHasProdInWindow = true;
+            }
+        }
+        if (userHasProdInWindow) activeCountInWindow++;
+    }
+
+    let activeHoursCount = 0;
+    for (let h = 0; h < 24; h++) {
+        if (mask(h)) activeHoursCount++;
+    }
+    if (activeHoursCount === 0) activeHoursCount = 1;
+
+    const teamAvgPerHour = (totOrd / activeHoursCount).toFixed(0);
+    const perOperatorAvgPerHour = activeCountInWindow > 0 ? (totOrd / (activeCountInWindow * activeHoursCount)).toFixed(1) : '0';
+
+    const ratioPçsPed = totOrd > 0 ? (totIt / totOrd).toFixed(2) : '0.00';
+
+    let prodT1 = 0, prodT2 = 0, prodT3 = 0;
+    for (const u of state.selectedUsers) {
+        const v = users[u];
+        if (!v) continue;
+        const userOrdArr = getUserOrd(v);
+        for (let h = 0; h < 24; h++) {
+            const oVal = userOrdArr[h] || 0;
+            if (h >= 6 && h <= 13) prodT1 += oVal;
+            else if (h >= 14 && h <= 21) prodT2 += oVal;
+            else prodT3 += oVal;
+        }
+    }
+
+    let autoGoalT1 = 0, autoGoalT2 = 0, autoGoalT3 = 0;
+    let autoGoalPeçasT1 = 0, autoGoalPeçasT2 = 0, autoGoalPeçasT3 = 0;
+    let countT1 = 0, countT2 = 0, countT3 = 0;
+
+    for (const u of state.selectedUsers) {
+        const v = users[u];
+        if (!v) continue;
+        const shift = userTurno(getUserOrd(v));
+        const uMetaOrd = getUserMetaOrd(u);
+        const uMetaIt = getUserMetaIt(u);
+
+        if (shift === 'T1') { autoGoalT1 += uMetaOrd * 8; autoGoalPeçasT1 += uMetaIt * 8; countT1++; }
+        else if (shift === 'T2') { autoGoalT2 += uMetaOrd * 8; autoGoalPeçasT2 += uMetaIt * 8; countT2++; }
+        else if (shift === 'T3') { autoGoalT3 += uMetaOrd * 8; autoGoalPeçasT3 += uMetaIt * 8; countT3++; }
+    }
+
+    const autoGoalGeral = autoGoalT1 + autoGoalT2 + autoGoalT3;
+    const autoGoalPeçasGeral = autoGoalPeçasT1 + autoGoalPeçasT2 + autoGoalPeçasT3;
+
+    const goalT1 = state.manualGoals.t1 != null ? state.manualGoals.t1 : autoGoalT1;
+    const goalT2 = state.manualGoals.t2 != null ? state.manualGoals.t2 : autoGoalT2;
+    const goalT3 = state.manualGoals.t3 != null ? state.manualGoals.t3 : autoGoalT3;
+    const goalGeral = state.manualGoals.geral != null ? state.manualGoals.geral : autoGoalGeral;
+
+    const goalPeçasT1 = state.manualItemGoals.t1 != null ? state.manualItemGoals.t1 : autoGoalPeçasT1;
+    const goalPeçasT2 = state.manualItemGoals.t2 != null ? state.manualItemGoals.t2 : autoGoalPeçasT2;
+    const goalPeçasT3 = state.manualItemGoals.t3 != null ? state.manualItemGoals.t3 : autoGoalPeçasT3;
+    const goalPeçasGeral = state.manualItemGoals.geral != null ? state.manualItemGoals.geral : autoGoalPeçasGeral;
+
+    const elInT1 = document.getElementById('inputMetaT1');
+    const elInT2 = document.getElementById('inputMetaT2');
+    const elInT3 = document.getElementById('inputMetaT3');
+    const elInGeral = document.getElementById('inputMetaGeral');
+
+    if (elInT1 && document.activeElement !== elInT1) elInT1.value = goalT1;
+    if (elInT2 && document.activeElement !== elInT2) elInT2.value = goalT2;
+    if (elInT3 && document.activeElement !== elInT3) elInT3.value = goalT3;
+    if (elInGeral && document.activeElement !== elInGeral) elInGeral.value = goalGeral;
+
+    const elInPT1 = document.getElementById('inputMetaPeçasT1');
+    const elInPT2 = document.getElementById('inputMetaPeçasT2');
+    const elInPT3 = document.getElementById('inputMetaPeçasT3');
+    const elInPGeral = document.getElementById('inputMetaPeçasGeral');
+
+    if (elInPT1 && document.activeElement !== elInPT1) elInPT1.value = goalPeçasT1;
+    if (elInPT2 && document.activeElement !== elInPT2) elInPT2.value = goalPeçasT2;
+    if (elInPT3 && document.activeElement !== elInPT3) elInPT3.value = goalPeçasT3;
+    if (elInPGeral && document.activeElement !== elInPGeral) elInPGeral.value = goalPeçasGeral;
+
+    document.getElementById('lblCountT1').innerText = `${countT1} oper. alocados no T1`;
+    document.getElementById('lblCountT2').innerText = `${countT2} oper. alocados no T2`;
+    document.getElementById('lblCountT3').innerText = `${countT3} oper. alocados no T3`;
+    document.getElementById('lblCountGeral').innerText = `Capacidade Total (${countT1 + countT2 + countT3} oper.)`;
+
+    document.getElementById('lblCountPeçasT1').innerText = `${countT1} oper. alocados no T1`;
+    document.getElementById('lblCountPeçasT2').innerText = `${countT2} oper. alocados no T2`;
+    document.getElementById('lblCountPeçasT3').innerText = `${countT3} oper. alocados no T3`;
+    document.getElementById('lblCountPeçasGeral').innerText = `Capacidade Total (${countT1 + countT2 + countT3} oper.)`;
+
+    const pctT1 = goalT1 > 0 ? Math.round((prodT1 / goalT1) * 100) : 0;
+    const pctT2 = goalT2 > 0 ? Math.round((prodT2 / goalT2) * 100) : 0;
+    const pctT3 = goalT3 > 0 ? Math.round((prodT3 / goalT3) * 100) : 0;
+    const pctGeral = goalGeral > 0 ? Math.round((totOrd / goalGeral) * 100) : 0;
+
+    const timeWindowLabel = `${String(state.startHour).padStart(2, '0')}h–${String(state.endHour).padStart(2, '0')}h`;
+
+    const html = `
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-brand-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">PEDIDOS NO PERÍODO</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30 shrink-0">${timeWindowLabel}</span>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-white my-1">${totOrd.toLocaleString('pt-BR')}</div>
+            <span class="text-[10px] text-slate-500 truncate">Volume de pedidos processados</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-emerald-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">ITENS / PEÇAS</span>
+                <i class="fa-solid fa-boxes-packing text-emerald-400 text-xs shrink-0"></i>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-emerald-400 my-1">${totIt.toLocaleString('pt-BR')}</div>
+            <span class="text-[10px] text-slate-500 truncate">Total de itens bipados/manuseados</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-cyan-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">MÉDIA PEÇAS / PEDIDO</span>
+                <i class="fa-solid fa-layer-group text-cyan-400 text-xs shrink-0"></i>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+                <span class="text-2xl lg:text-3xl font-black text-cyan-400">${ratioPçsPed}</span>
+                <span class="text-xs text-slate-400 font-semibold">pç/ped</span>
+            </div>
+            <span class="text-[10px] text-slate-500 truncate">${totIt.toLocaleString('pt-BR')} peças / ${totOrd.toLocaleString('pt-BR')} ped</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-indigo-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">OPERADORES ATIVOS</span>
+                <i class="fa-solid fa-users text-indigo-400 text-xs shrink-0"></i>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-indigo-400 my-1">${activeCountInWindow}</div>
+            <span class="text-[10px] text-slate-500 truncate">Colaboradores com produção no filtro</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-amber-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 truncate">MÉDIA EQUIPE / HORA</span>
+                <i class="fa-solid fa-people-group text-amber-400 text-xs shrink-0"></i>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+                <span class="text-2xl lg:text-3xl font-black text-amber-400">${teamAvgPerHour}</span>
+                <span class="text-xs text-slate-400 font-semibold">ped/h</span>
+            </div>
+            <span class="text-[10px] text-slate-500 truncate">Capacidade de entrega global / h</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-indigo-400">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">MÉDIA POR OPERADOR/H</span>
+                <i class="fa-solid fa-user-check text-indigo-400 text-xs shrink-0"></i>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+                <span class="text-2xl lg:text-3xl font-black text-indigo-300">${perOperatorAvgPerHour}</span>
+                <span class="text-xs text-slate-400 font-semibold">ped/h</span>
+            </div>
+            <span class="text-[10px] text-slate-500 truncate">Ritmo individual médio por operador</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-amber-400">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 truncate">ATINGIMENTO META T1</span>
+                <i class="fa-solid fa-bullseye text-amber-400 text-xs shrink-0"></i>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-amber-400 my-1">${pctT1}%</div>
+            <span class="text-[10px] text-slate-500 truncate">Meta T1: ${goalT1.toLocaleString('pt-BR')} ped</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-indigo-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 truncate">ATINGIMENTO META T2</span>
+                <i class="fa-solid fa-bullseye text-indigo-400 text-xs shrink-0"></i>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-indigo-400 my-1">${pctT2}%</div>
+            <span class="text-[10px] text-slate-500 truncate">Meta T2: ${goalT2.toLocaleString('pt-BR')} ped</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-purple-500">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 truncate">ATINGIMENTO META T3</span>
+                <i class="fa-solid fa-bullseye text-purple-400 text-xs shrink-0"></i>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-purple-400 my-1">${pctT3}%</div>
+            <span class="text-[10px] text-slate-500 truncate">Meta T3: ${goalT3.toLocaleString('pt-BR')} ped</span>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col justify-between min-h-[130px] border-t-2 border-t-purple-400">
+            <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-300 truncate">ATINGIMENTO META GERAL</span>
+                <i class="fa-solid fa-trophy text-purple-400 text-xs shrink-0"></i>
+            </div>
+            <div class="text-2xl lg:text-3xl font-black text-purple-300 my-1">${pctGeral}%</div>
+            <span class="text-[10px] text-slate-500 truncate">Meta Geral: ${goalGeral.toLocaleString('pt-BR')} ped</span>
+        </div>
+    `;
+    document.getElementById('kpiContainer').innerHTML = html;
+}
+
+let draggedChipUser = null;
+
+// User Selection Chips with Drag-and-Drop Reordering
+function renderUserChips() {
+    const container = document.getElementById('userChipsWrapper');
+    container.innerHTML = '';
+    const q = (document.getElementById('userSearchInput').value || '').toLowerCase();
+    
+    let userEntries = Object.entries(state.data?.users || {});
+    if (!userEntries.length) {
+        container.innerHTML = '<span class="text-xs text-slate-500 py-1">Nenhum operador encontrado.</span>';
+        return;
+    }
+
+    userEntries.sort((a, b) => {
+        const uA = a[0], uB = b[0];
+        const idxA = state.customUserOrder.indexOf(uA);
+        const idxB = state.customUserOrder.indexOf(uB);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        const nameA = getUserDisplayName(uA).toLowerCase();
+        const nameB = getUserDisplayName(uB).toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    const currentKeys = userEntries.map(e => e[0]);
+    if (!state.customUserOrder || state.customUserOrder.length === 0) {
+        state.customUserOrder = [...currentKeys];
+        saveCustomUserOrderToStorage(state.customUserOrder);
+    } else {
+        currentKeys.forEach(k => {
+            if (!state.customUserOrder.includes(k)) state.customUserOrder.push(k);
+        });
+    }
+
+    const grouped = { T1: [], T2: [], T3: [] };
+
+    for (const [u, v] of userEntries) {
+        const displayName = getUserDisplayName(u);
+        if (q && !displayName.toLowerCase().includes(q) && !u.toLowerCase().includes(q)) continue;
+        const shift = userTurno(getUserOrd(v));
+        if (grouped[shift]) {
+            grouped[shift].push({ u, v, displayName, shift });
+        } else {
+            grouped['T1'].push({ u, v, displayName, shift: 'T1' });
+        }
+    }
+
+    const shiftDefs = [
+        { id: 'T1', label: 'Turno 1 (T1 — Manhã)', badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+        { id: 'T2', label: 'Turno 2 (T2 — Tarde)', badgeClass: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+        { id: 'T3', label: 'Turno 3 (T3 — Noite)', badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/30' }
+    ];
+
+    let hasAny = false;
+
+    shiftDefs.forEach(sDef => {
+        const list = grouped[sDef.id];
+        if (!list || list.length === 0) return;
+        hasAny = true;
+
+        const groupEl = document.createElement('div');
+        groupEl.className = 'space-y-1.5';
+
+        const headerEl = document.createElement('div');
+        headerEl.className = 'flex items-center gap-2 text-[11px] font-bold text-slate-400 mt-1';
+        headerEl.innerHTML = `
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${sDef.badgeClass}">${sDef.id}</span>
+            <span>${sDef.label} — <strong class="text-white">${list.length}</strong> operador(es)</span>
+            <div class="flex-1 h-px bg-white/10"></div>
+            <span class="text-[10px] text-slate-500 font-normal flex items-center gap-1"><i class="fa-solid fa-arrows-up-down-left-right text-[9px]"></i>Arraste para mover</span>
+        `;
+        groupEl.appendChild(headerEl);
+
+        const chipsHolder = document.createElement('div');
+        chipsHolder.className = 'flex flex-wrap gap-1.5 pl-1';
+
+        for (const item of list) {
+            const isChecked = state.selectedUsers.has(item.u);
+            const chip = document.createElement('label');
+            chip.draggable = true;
+            chip.dataset.user = item.u;
+            chip.className = `cursor-grab active:cursor-grabbing select-none flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                isChecked ? 'bg-brand-500/20 border-brand-500/50 text-white shadow-sm' : 'bg-slate-900/50 border-white/5 text-slate-500 hover:border-white/20'
+            }`;
+            chip.innerHTML = `
+                <i class="fa-solid fa-grip-vertical text-slate-500 text-[10px] opacity-60 mr-0.5"></i>
+                <input type="checkbox" ${isChecked ? 'checked' : ''} class="hidden"/>
+                <span>${item.displayName}</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded font-bold ${item.shift === 'T1' ? 'bg-amber-500/20 text-amber-300' : (item.shift === 'T2' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-500/20 text-purple-300')}">${item.shift}</span>
+            `;
+
+            chip.querySelector('input').onchange = e => {
+                if (e.target.checked) state.selectedUsers.add(item.u);
+                else state.selectedUsers.delete(item.u);
+                renderApp();
+            };
+
+            chip.addEventListener('dragstart', (e) => {
+                draggedChipUser = item.u;
+                e.dataTransfer.setData('text/plain', item.u);
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => chip.classList.add('opacity-40', 'scale-95', 'border-brand-500'), 0);
+            });
+
+            chip.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                chip.classList.add('border-brand-400', 'bg-brand-500/30', 'scale-105');
+            });
+
+            chip.addEventListener('dragleave', () => {
+                chip.classList.remove('border-brand-400', 'bg-brand-500/30', 'scale-105');
+            });
+
+            chip.addEventListener('drop', (e) => {
+                e.preventDefault();
+                chip.classList.remove('border-brand-400', 'bg-brand-500/30', 'scale-105');
+                const srcUser = e.dataTransfer.getData('text/plain') || draggedChipUser;
+                const targetUser = item.u;
+
+                if (srcUser && srcUser !== targetUser) {
+                    const fromIdx = state.customUserOrder.indexOf(srcUser);
+                    const toIdx = state.customUserOrder.indexOf(targetUser);
+
+                    if (fromIdx !== -1 && toIdx !== -1) {
+                        state.customUserOrder.splice(fromIdx, 1);
+                        state.customUserOrder.splice(toIdx, 0, srcUser);
+                        saveCustomUserOrderToStorage(state.customUserOrder);
+                        showToast('Ordem dos colaboradores atualizada!', 'success');
+                        renderApp();
+                    }
+                }
+            });
+
+            chip.addEventListener('dragend', () => {
+                chip.classList.remove('opacity-40', 'scale-95', 'border-brand-500');
+                draggedChipUser = null;
+            });
+
+            chipsHolder.appendChild(chip);
+        }
+
+        groupEl.appendChild(chipsHolder);
+        container.appendChild(groupEl);
+    });
+
+    if (!hasAny) {
+        container.innerHTML = '<span class="text-xs text-slate-500 py-1">Nenhum operador encontrado para a busca.</span>';
+    }
+}
+
+// Render Overview Tab
+function renderVisaoGeralTab() {
+    const mask = getShiftFilter();
+    const hours = Array.from({ length: 24 }, (_, i) => i).filter(mask);
+    const ordH = hours.map(h => {
+        let sum = 0;
+        for (const u of state.selectedUsers) {
+            const v = state.data.users[u];
+            if (v) sum += getUserOrd(v)[h] || 0;
+        }
+        return sum;
+    });
+    const itH = hours.map(h => {
+        let sum = 0;
+        for (const u of state.selectedUsers) sum += state.data.users[u]?.it[h] || 0;
+        return sum;
+    });
+
+    let t1Ord = 0, t2Ord = 0, t3Ord = 0, totalOrd = 0;
+    let t1Ops = 0, t2Ops = 0, t3Ops = 0;
+
+    const activeUsers = Object.entries(state.data?.users || {}).filter(([u]) => state.selectedUsers.has(u));
+
+    for (const [u, v] of activeUsers) {
+        const userOrdArr = getUserOrd(v);
+        const shift = userTurno(userOrdArr);
+
+        if (shift === 'T1') t1Ops++;
+        else if (shift === 'T2') t2Ops++;
+        else if (shift === 'T3') t3Ops++;
+
+        for (let h = 0; h < 24; h++) {
+            const val = userOrdArr[h] || 0;
+            totalOrd += val;
+            if (h >= 6 && h <= 13) t1Ord += val;
+            else if (h >= 14 && h <= 21) t2Ord += val;
+            else t3Ord += val;
+        }
+    }
+
+    const totalOps = t1Ops + t2Ops + t3Ops;
+
+    const avgT1 = t1Ops > 0 ? (t1Ord / (t1Ops * 8)) : (t1Ord / 8);
+    const avgT2 = t2Ops > 0 ? (t2Ord / (t2Ops * 8)) : (t2Ord / 8);
+    const avgT3 = t3Ops > 0 ? (t3Ord / (t3Ops * 8)) : (t3Ord / 8);
+    const avgTotal = totalOps > 0 ? (totalOrd / (totalOps * 8)) : (totalOrd / 24);
+
+    const fmtAvg = num => {
+        if (!num || isNaN(num) || !isFinite(num)) return '0';
+        return Number.isInteger(num) ? num.toString() : num.toFixed(1);
+    };
+
+    document.getElementById('avgT1Val').innerText = fmtAvg(avgT1);
+    document.getElementById('avgT2Val').innerText = fmtAvg(avgT2);
+    document.getElementById('avgT3Val').innerText = fmtAvg(avgT3);
+    document.getElementById('avgTotalVal').innerText = fmtAvg(avgTotal);
+
+    const labels = hours.map(h => `${h}h`);
+    const ctx1 = document.getElementById('chartOrdersTime');
+    const ctx2 = document.getElementById('chartItemsTime');
+
+    chartInstances.ordTime = new Chart(ctx1, {
+        type: state.chartType === 'line' ? 'line' : 'bar',
+        data: {
+            labels,
+            datasets: [{ label: 'Pedidos', data: ordH, borderColor: '#818cf8', backgroundColor: 'rgba(129, 140, 248, 0.2)', fill: true, tension: 0.3 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    chartInstances.itTime = new Chart(ctx2, {
+        type: state.chartType === 'line' ? 'line' : 'bar',
+        data: {
+            labels,
+            datasets: [{ label: 'Itens', data: itH, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.2)', fill: true, tension: 0.3 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+}
+
+// Render Ranking Tab
+function renderRankingTab() {
+    const users = Object.entries(state.data?.users || {})
+        .filter(([u]) => state.selectedUsers.has(u))
+        .map(([u, v]) => {
+            const displayName = getUserDisplayName(u);
+            const userOrdArr = getUserOrd(v);
+            const totO = userOrdArr.reduce((a, b) => a + b, 0);
+            const totI = v.it.reduce((a, b) => a + b, 0);
+            return { u, displayName, totO, totI, shift: userTurno(userOrdArr) };
+        })
+        .sort((a, b) => b.totO - a.totO);
+
+    const podiumContainer = document.getElementById('podiumGrid');
+    const medals = ['🥇', '🥈', '🥉'];
+    
+    podiumContainer.innerHTML = users.slice(0, 3).map((r, i) => `
+        <div class="glass-card p-5 relative overflow-hidden text-center space-y-2 border-t-4 ${i === 0 ? 'border-amber-400' : (i === 1 ? 'border-slate-300' : 'border-amber-700')}">
+            <span class="text-3xl absolute top-3 right-3">${medals[i]}</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${i + 1}º Lugar</span>
+            <h4 class="font-extrabold text-base text-white">${r.displayName}</h4>
+            <div class="text-3xl font-black text-brand-400">${r.totO.toLocaleString('pt-BR')}</div>
+            <p class="text-xs text-slate-400">${r.totI.toLocaleString('pt-BR')} itens processados</p>
+        </div>
+    `).join('');
+
+    const usersByItems = [...users].sort((a, b) => b.totI - a.totI);
+
+    const chartHeight = Math.max(320, users.length * 36);
+    const containerO = document.getElementById('chartRankOrders')?.parentElement;
+    const containerI = document.getElementById('chartRankItems')?.parentElement;
+    if (containerO) containerO.style.height = `${chartHeight}px`;
+    if (containerI) containerI.style.height = `${chartHeight}px`;
+
+    const ctxRankO = document.getElementById('chartRankOrders');
+    const ctxRankI = document.getElementById('chartRankItems');
+
+    chartInstances.rankO = new Chart(ctxRankO, {
+        type: 'bar',
+        data: {
+            labels: users.map(u => u.displayName),
+            datasets: [{ label: 'Pedidos', data: users.map(u => u.totO), backgroundColor: '#818cf8', borderRadius: 8 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
+
+    chartInstances.rankI = new Chart(ctxRankI, {
+        type: 'bar',
+        data: {
+            labels: usersByItems.map(u => u.displayName),
+            datasets: [{ label: 'Itens', data: usersByItems.map(u => u.totI), backgroundColor: '#34d399', borderRadius: 8 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
+}
+
+// Render Individual Operator Performance Cards
+function renderIndividualTab() {
+    const grid = document.getElementById('individualUsersGrid');
+    grid.innerHTML = '';
+
+    let activeUsers = Object.entries(state.data?.users || {}).filter(([u]) => state.selectedUsers.has(u));
+
+    if (activeUsers.length === 0) {
+        grid.innerHTML = '<div class="col-span-full text-center text-xs text-slate-400 py-12">Nenhum operador selecionado ou sem dados para o dia.</div>';
+        return;
+    }
+
+    const mask = getShiftFilter();
+
+    activeUsers.sort((a, b) => {
+        const uA = a[0], vA = a[1];
+        const uB = b[0], vB = b[1];
+
+        const ordA = getUserOrd(vA);
+        const ordB = getUserOrd(vB);
+
+        let totOrdersA = 0, totItemsA = 0;
+        let totOrdersB = 0, totItemsB = 0;
+
+        for (let h = 0; h < 24; h++) {
+            if (mask(h)) {
+                totOrdersA += ordA[h] || 0;
+                totItemsA += vA.it[h] || 0;
+                totOrdersB += ordB[h] || 0;
+                totItemsB += vB.it[h] || 0;
+            }
+        }
+
+        const nameA = getUserDisplayName(uA).toLowerCase();
+        const nameB = getUserDisplayName(uB).toLowerCase();
+
+        switch (state.userSort) {
+            case 'orders_desc':
+                return totOrdersB - totOrdersA || totItemsB - totItemsA || nameA.localeCompare(nameB);
+            case 'items_desc':
+                return totItemsB - totItemsA || totOrdersB - totOrdersA || nameA.localeCompare(nameB);
+            case 'orders_asc':
+                return totOrdersA - totOrdersB || totItemsA - totItemsB || nameA.localeCompare(nameB);
+            case 'items_asc':
+                return totItemsA - totItemsB || totOrdersA - totOrdersB || nameA.localeCompare(nameB);
+            case 'name_asc':
+            default:
+                return nameA.localeCompare(nameB);
+        }
+    });
+
+    for (const [u, v] of activeUsers) {
+        const displayName = getUserDisplayName(u);
+        const metaOrd = getUserMetaOrd(u);
+        const metaIt = getUserMetaIt(u);
+
+        const userOrdArr = getUserOrd(v);
+        const userItArr = v.it || Array(24).fill(0);
+        const shift = userTurno(userOrdArr);
+
+        let shiftHours = [];
+        if (shift === 'T1') shiftHours = [6, 7, 8, 9, 10, 11, 12, 13];
+        else if (shift === 'T2') shiftHours = [14, 15, 16, 17, 18, 19, 20, 21];
+        else shiftHours = [22, 23, 0, 1, 2, 3, 4, 5];
+
+        const labels = shiftHours.map(h => `${h}h`);
+        const ordData = shiftHours.map(h => userOrdArr[h] || 0);
+        const itData = shiftHours.map(h => userItArr[h] || 0);
+
+        const totO = ordData.reduce((a, b) => a + b, 0);
+        const totI = itData.reduce((a, b) => a + b, 0);
+        
+        const activeHours = shiftHours.filter(h => (userOrdArr[h] || 0) > 0 || (userItArr[h] || 0) > 0).length;
+        const avgPerHour = activeHours > 0 ? (totO / activeHours).toFixed(1) : (totO / (shiftHours.length || 1)).toFixed(1);
+
+        // Cálculo automático da meta diária conforme o dia da semana
+        const dateObj = state.day ? new Date(state.day + 'T00:00:00') : new Date();
+        const dayOfWeek = dateObj.getDay(); // 0: Domingo, 1-5: Seg-Sex, 6: Sábado
+        const dailyGoal = (dayOfWeek === 6) ? 150 : 165; // 150 aos sábados, 165 de seg a sex
+
+        // Métricas dos novos cards
+        const remainingToGoal = Math.max(0, dailyGoal - totO);
+        let remainingHtml = '';
+        if (remainingToGoal === 0) {
+            remainingHtml = `<div class="flex items-center gap-1.5 flex-wrap"><span class="text-xl font-black text-emerald-400">0</span><span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-md">Meta Batida!</span></div>`;
+        } else {
+            remainingHtml = `<span class="text-xl font-black text-amber-400">${remainingToGoal.toLocaleString('pt-BR')}</span>`;
+        }
+
+        const pctDailyGoal = dailyGoal > 0 ? Math.round((totO / dailyGoal) * 100) : 0;
+        const pctColorClass = pctDailyGoal >= 100 ? 'text-emerald-400' : (pctDailyGoal >= 75 ? 'text-amber-400' : 'text-rose-400');
+
+        const safeId = u.replace(/[^a-zA-Z0-9]/g, '_');
+        const cardId = `userCard_${safeId}`;
+
+        const card = document.createElement('div');
+        card.id = cardId;
+        card.className = 'glass-card p-5 space-y-4 rounded-2xl border border-white/10 bg-slate-900/90 shadow-xl transition-all hover:border-brand-500/40';
+        
+        card.innerHTML = `
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <h4 class="font-extrabold text-base text-white tracking-tight">${displayName}</h4>
+                    <span class="text-[10px] text-slate-500">(${u})</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${
+                        shift === 'T1' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 
+                        (shift === 'T2' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30')
+                    }">${shift}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="downloadUserCardPng('${cardId}', '${displayName}')" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-white/10 flex items-center gap-1.5 transition-all shadow-sm">
+                        <i class="fa-solid fa-download text-brand-400 text-xs"></i> PNG
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-white/5 space-y-2">
+                    <div class="flex items-center justify-center gap-3 text-[11px]">
+                        <span class="flex items-center gap-1.5 font-bold text-brand-400">
+                            <span class="w-2.5 h-2.5 bg-brand-500 rounded-sm inline-block"></span> Pedidos
+                        </span>
+                        <span class="flex items-center gap-1.5 font-bold text-rose-400">
+                            <span class="w-3 border-t-2 border-dashed border-rose-400 inline-block"></span> Meta (${metaOrd}/h)
+                        </span>
+                    </div>
+                    <div class="h-44 relative">
+                        <canvas id="chartUserOrd_${safeId}"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-white/5 space-y-2">
+                    <div class="flex items-center justify-center gap-3 text-[11px]">
+                        <span class="flex items-center gap-1.5 font-bold text-emerald-400">
+                            <span class="w-2.5 h-2.5 bg-emerald-500 rounded-sm inline-block"></span> Itens
+                        </span>
+                        <span class="flex items-center gap-1.5 font-bold text-rose-400">
+                            <span class="w-3 border-t-2 border-dashed border-rose-400 inline-block"></span> Meta (${metaIt}/h)
+                        </span>
+                    </div>
+                    <div class="h-44 relative">
+                        <canvas id="chartUserIt_${safeId}"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-white/5">
+                    <span class="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 block mb-1">PEDIDOS</span>
+                    <span class="text-xl font-black text-white">${totO.toLocaleString('pt-BR')}</span>
+                </div>
+
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-white/5">
+                    <span class="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 block mb-1">ITENS</span>
+                    <span class="text-xl font-black text-white">${totI.toLocaleString('pt-BR')}</span>
+                </div>
+
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-white/5">
+                    <span class="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 block mb-1">HORAS ATIVAS</span>
+                    <span class="text-xl font-black text-white">${activeHours}</span>
+                </div>
+
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-white/5">
+                    <span class="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 block mb-1">MÉDIA/HORA</span>
+                    <span class="text-xl font-black text-white">${avgPerHour}</span>
+                </div>
+
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-white/5" title="Meta do dia: ${dailyGoal} pedidos (${dayOfWeek === 6 ? 'Sábado' : 'Seg-Sex'})">
+                    <span class="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 block mb-1">FALTA P/ META</span>
+                    ${remainingHtml}
+                </div>
+
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-white/5" title="Percentual produzido referente à meta de ${dailyGoal} pedidos">
+                    <span class="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 block mb-1">% META DIÁRIA</span>
+                    <span class="text-xl font-black ${pctColorClass}">${pctDailyGoal}%</span>
+                </div>
+            </div>
+        `;
+
+        grid.appendChild(card);
+
+        const ctxOrd = document.getElementById(`chartUserOrd_${safeId}`);
+        chartInstances[`u_ord_${safeId}`] = new Chart(ctxOrd, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Pedidos',
+                        data: ordData,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.45,
+                        pointBackgroundColor: '#818cf8',
+                        pointBorderColor: '#ffffff',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Meta',
+                        data: Array(shiftHours.length).fill(metaOrd),
+                        borderColor: '#f43f5e',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } }, beginAtZero: true }
+                }
+            }
+        });
+
+        const ctxIt = document.getElementById(`chartUserIt_${safeId}`);
+        chartInstances[`u_it_${safeId}`] = new Chart(ctxIt, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Itens',
+                        data: itData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.25)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.45,
+                        pointBackgroundColor: '#34d399',
+                        pointBorderColor: '#ffffff',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Meta',
+                        data: Array(shiftHours.length).fill(metaIt),
+                        borderColor: '#f43f5e',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } }, beginAtZero: true }
+                }
+            }
+        });
+    }
+}
+
+// Render Login Users Tab Table
+function renderLoginUsersTab() {
+    const tbody = document.getElementById('loginUsersTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const allLogins = Object.keys(state.data?.users || {}).sort((a, b) => a.localeCompare(b));
+
+    if (allLogins.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-slate-500 py-6">Nenhum login detectado na planilha do dia selecionado.</td></tr>';
+        return;
+    }
+
+    allLogins.forEach(login => {
+        const userObj = state.data.users[login];
+        const shift = userTurno(getUserOrd(userObj));
+        const curMap = userMappings[login] || { displayName: login, metaOrd: 25, metaIt: 100 };
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="text-left font-mono text-xs text-slate-300 font-bold">${login}</td>
+            <td class="text-left">
+                <input type="text" value="${curMap.displayName || login}" class="input-display-name w-full max-w-xs bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white font-bold focus:outline-none focus:border-brand-500"/>
+            </td>
+            <td>
+                <input type="number" min="1" value="${curMap.metaOrd != null ? curMap.metaOrd : 25}" class="input-meta-ord w-20 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-center text-brand-400 font-bold focus:outline-none focus:border-brand-500"/>
+            </td>
+            <td>
+                <input type="number" min="1" value="${curMap.metaIt != null ? curMap.metaIt : 100}" class="input-meta-it w-20 bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-center text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"/>
+            </td>
+            <td>
+                <span class="text-[10px] px-2 py-0.5 rounded font-bold ${shift === 'T1' ? 'bg-amber-500/20 text-amber-300' : (shift === 'T2' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-500/20 text-purple-300')}">${shift}</span>
+            </td>
+        `;
+
+        const nameIn = tr.querySelector('.input-display-name');
+        const metaOrdIn = tr.querySelector('.input-meta-ord');
+        const metaItIn = tr.querySelector('.input-meta-it');
+
+        nameIn.onchange = () => {
+            if (!userMappings[login]) userMappings[login] = {};
+            userMappings[login].displayName = nameIn.value.trim() || login;
+            saveUserMappingsToStorage(userMappings);
+            showToast(`Nome alterado para ${userMappings[login].displayName}`, 'success');
+            renderApp();
+        };
+
+        metaOrdIn.onchange = () => {
+            if (!userMappings[login]) userMappings[login] = {};
+            userMappings[login].metaOrd = Number(metaOrdIn.value) || 25;
+            saveUserMappingsToStorage(userMappings);
+            showToast(`Meta OE de ${userMappings[login].displayName || login} atualizada!`, 'success');
+            renderApp();
+        };
+
+        metaItIn.onchange = () => {
+            if (!userMappings[login]) userMappings[login] = {};
+            userMappings[login].metaIt = Number(metaItIn.value) || 100;
+            saveUserMappingsToStorage(userMappings);
+            showToast(`Meta Peças de ${userMappings[login].displayName || login} atualizada!`, 'success');
+            renderApp();
+        };
+
+        tbody.appendChild(tr);
+    });
+}
+
+async function downloadUserCardPng(cardId, username) {
+    const cardEl = document.getElementById(cardId);
+    if (!cardEl) return;
+    try {
+        if (typeof html2canvas === 'undefined') {
+            showToast('Aguarde o carregamento da biblioteca de exportação...', 'info');
+            return;
+        }
+        const canvas = await html2canvas(cardEl, { backgroundColor: '#090d16', scale: 2 });
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `card_${username.replace(/\s+/g, '_')}_${state.day || 'dia'}.png`;
+        a.click();
+        showToast(`Card de ${username} exportado em PNG!`, 'success');
+    } catch (e) {
+        showToast('Erro ao exportar o card.', 'error');
+    }
+}
+
+// Elapsed Hour Verification Helper for Matrix Tables
+function isHourElapsed(u, h, userObj, allUsers) {
+    const userOrdArr = getUserOrd(userObj);
+    const uShift = userTurno(userOrdArr);
+    
+    let shiftHours = [];
+    if (uShift === 'T1') shiftHours = [6, 7, 8, 9, 10, 11, 12, 13];
+    else if (uShift === 'T2') shiftHours = [14, 15, 16, 17, 18, 19, 20, 21];
+    else if (uShift === 'T3') shiftHours = [22, 23, 0, 1, 2, 3, 4, 5];
+    else shiftHours = Array.from({length: 24}, (_, i) => i);
+
+    const hIdxInShift = shiftHours.indexOf(h);
+    if (hIdxInShift === -1) return false;
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const isToday = (state.day === todayIso);
+
+    if (isToday) {
+        const curH = new Date().getHours();
+        const curIdxInShift = shiftHours.indexOf(curH);
+        if (curIdxInShift !== -1) {
+            return hIdxInShift <= curIdxInShift;
+        } else {
+            const lastShiftH = shiftHours[shiftHours.length - 1];
+            if (uShift === 'T1' && curH > lastShiftH) return true;
+            if (uShift === 'T2' && curH > lastShiftH) return true;
+            if (uShift === 'T3' && (curH > lastShiftH && curH < 22)) return true;
+            const firstShiftH = shiftHours[0];
+            if (uShift === 'T1' && curH < firstShiftH) return false;
+            if (uShift === 'T2' && curH < firstShiftH) return false;
+            if (uShift === 'T3' && (curH < firstShiftH && curH > 5)) return false;
+            return hIdxInShift <= 0;
+        }
+    } else {
+        let maxShiftIdx = -1;
+        for (const [otherU, otherV] of allUsers) {
+            const otherOrd = getUserOrd(otherV);
+            if (userTurno(otherOrd) === uShift) {
+                shiftHours.forEach((shH, idx) => {
+                    if ((otherOrd[shH] || 0) > 0 || (otherV.it && (otherV.it[shH] || 0) > 0)) {
+                        if (idx > maxShiftIdx) maxShiftIdx = idx;
+                    }
+                });
+            }
+        }
+        if (maxShiftIdx === -1) return false;
+        return hIdxInShift <= maxShiftIdx;
+    }
+}
+
+// Render Interactive Matrix Tables (Pedidos & Itens)
+function renderMatrices() {
+    const mask = getShiftFilter();
+    const hours = Array.from({ length: 24 }, (_, i) => i).filter(mask);
+
+    const users = Object.entries(state.data?.users || {}).filter(([u]) => state.selectedUsers.has(u));
+
+    let htmlO = `<thead><tr><th>Operador</th>${hours.map(h => `<th>${h}h</th>`).join('')}<th>TOTAL</th></tr></thead><tbody>`;
+    const hourlyOrdTotals = Array(hours.length).fill(0);
+    let grandTotalOrd = 0;
+
+    for (const [u, v] of users) {
+        const displayName = getUserDisplayName(u);
+        const uMetaOrd = getUserMetaOrd(u);
+        let rowSum = 0;
+        const userOrdArr = getUserOrd(v);
+        
+        htmlO += `<tr><td>
+            <span class="font-bold text-white block">${displayName}</span>
+            <span class="text-[9px] text-slate-500 font-mono">${u}</span>
+        </td>`;
+        
+        hours.forEach((h, idx) => {
+            const val = userOrdArr[h] || 0;
+            rowSum += val;
+            hourlyOrdTotals[idx] += val;
+            
+            const elapsed = isHourElapsed(u, h, v, users);
+            let cls = 'cell-empty';
+            let displayVal = '·';
+
+            if (val > 0) {
+                cls = val >= uMetaOrd ? 'cell-ok' : 'cell-no';
+                displayVal = val;
+            } else if (elapsed) {
+                cls = 'cell-no';
+                displayVal = 0;
+            }
+
+            htmlO += `<td class="${cls}">${displayVal}</td>`;
+        });
+        
+        grandTotalOrd += rowSum;
+        htmlO += `<td><strong class="text-brand-400">${rowSum}</strong></td></tr>`;
+    }
+
+    htmlO += `<tr class="bg-slate-900/90 font-extrabold border-t-2 border-brand-500/50">
+        <td><span class="text-brand-400 text-sm">TOTAL</span></td>
+        ${hourlyOrdTotals.map(tot => `<td class="text-brand-300 font-bold text-sm">${tot || '0'}</td>`).join('')}
+        <td><strong class="text-amber-400 text-base">${grandTotalOrd}</strong></td>
+    </tr>`;
+
+    document.getElementById('matrixOrdersTable').innerHTML = htmlO + '</tbody>';
+
+    let htmlI = `<thead><tr><th>Operador</th>${hours.map(h => `<th>${h}h</th>`).join('')}<th>TOTAL</th></tr></thead><tbody>`;
+    const hourlyItTotals = Array(hours.length).fill(0);
+    let grandTotalIt = 0;
+
+    for (const [u, v] of users) {
+        const displayName = getUserDisplayName(u);
+        const uMetaIt = getUserMetaIt(u);
+        let rowSum = 0;
+        
+        htmlI += `<tr><td>
+            <span class="font-bold text-white block">${displayName}</span>
+            <span class="text-[9px] text-slate-500 font-mono">${u}</span>
+        </td>`;
+        
+        hours.forEach((h, idx) => {
+            const val = v.it[h] || 0;
+            rowSum += val;
+            hourlyItTotals[idx] += val;
+
+            const elapsed = isHourElapsed(u, h, v, users);
+            let cls = 'cell-empty';
+            let displayVal = '·';
+
+            if (val > 0) {
+                cls = val >= uMetaIt ? 'cell-ok' : 'cell-no';
+                displayVal = val;
+            } else if (elapsed) {
+                cls = 'cell-no';
+                displayVal = 0;
+            }
+
+            htmlI += `<td class="${cls}">${displayVal}</td>`;
+        });
+        
+        grandTotalIt += rowSum;
+        htmlI += `<td><strong class="text-emerald-400">${rowSum}</strong></td></tr>`;
+    }
+
+    htmlI += `<tr class="bg-slate-900/90 font-extrabold border-t-2 border-emerald-500/50">
+        <td><span class="text-emerald-400 text-sm">TOTAL</span></td>
+        ${hourlyItTotals.map(tot => `<td class="text-emerald-300 font-bold text-sm">${tot || '0'}</td>`).join('')}
+        <td><strong class="text-amber-400 text-base">${grandTotalIt}</strong></td>
+    </tr>`;
+
+    document.getElementById('matrixItemsTable').innerHTML = htmlI + '</tbody>';
+}
+
+// Automatic Idle/Gap Detection (Excluding Meal Hours 02h, 11h, 18h)
+function renderOciosidades() {
+    const limitMin = +document.getElementById('ocioLimitMin').value || 10;
+    const limitSec = limitMin * 60;
+    const EXCLUDED_MEAL_HOURS = [2, 11, 18];
+
+    const users = Object.entries(state.data?.users || {}).filter(([u]) => state.selectedUsers.has(u));
+    const results = [];
+
+    for (const [u, v] of users) {
+        if (!v.secs || v.secs.length < 2) continue;
+        let idleSecTotal = 0;
+        let gapCount = 0;
+
+        for (let i = 1; i < v.secs.length; i++) {
+            const gap = v.secs[i] - v.secs[i - 1];
+            const hour = Math.floor(v.secs[i - 1] / 3600);
+            if (!EXCLUDED_MEAL_HOURS.includes(hour) && gap >= limitSec) {
+                idleSecTotal += gap;
+                gapCount++;
+            }
+        }
+        if (gapCount > 0) results.push({ u, displayName: getUserDisplayName(u), idleSecTotal, gapCount, shift: userTurno(getUserOrd(v)) });
+    }
+
+    results.sort((a, b) => b.idleSecTotal - a.idleSecTotal);
+
+    let html = `<thead><tr><th>Operador</th><th>Turno</th><th>Qtd Gaps</th><th>Tempo Ocioso Total</th></tr></thead><tbody>`;
+    for (const r of results) {
+        const mins = Math.round(r.idleSecTotal / 60);
+        html += `<tr>
+            <td>
+                <span class="font-bold text-white block">${r.displayName}</span>
+                <span class="text-[9px] text-slate-500 font-mono">${r.u}</span>
+            </td>
+            <td><span class="text-[10px] px-2 py-0.5 rounded font-bold ${r.shift === 'T1' ? 'bg-amber-500/20 text-amber-300' : (r.shift === 'T2' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-500/20 text-purple-300')}">${r.shift}</span></td>
+            <td><span class="font-bold text-amber-400">${r.gapCount}</span></td>
+            <td><strong class="text-rose-400">${mins} min</strong></td>
+        </tr>`;
+    }
+    document.getElementById('ocioTable').innerHTML = html + '</tbody>';
+}
+
+// Historical Period Evolution
+async function renderPeriodosTab() {
+    const all = await dbAll();
+    all.sort((a, b) => a.date.localeCompare(b.date));
+
+    const labels = all.map(d => new Date(d.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+    const ords = all.map(d => {
+        let sum = 0;
+        for (const [u, v] of Object.entries(d.users || {})) {
+            sum += getUserOrd(v).reduce((a, b) => a + b, 0);
+        }
+        return sum;
+    });
+    const its = all.map(d => {
+        let sum = 0;
+        for (const [u, v] of Object.entries(d.users || {})) {
+            sum += (v.it || []).reduce((a, b) => a + b, 0);
+        }
+        return sum;
+    });
+
+    const ctxP1 = document.getElementById('chartPeriodOrders');
+    const ctxP2 = document.getElementById('chartPeriodItems');
+
+    chartInstances.p1 = new Chart(ctxP1, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Pedidos', data: ords, backgroundColor: '#818cf8', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    chartInstances.p2 = new Chart(ctxP2, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Itens', data: its, backgroundColor: '#34d399', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+}
+
+// 1920x1080 Executive Canvas Report Generator
+function renderReportCanvas() {
+    const canvas = document.getElementById('reportCanvas');
+    if (!canvas) return;
+    canvas.width = 1920;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+
+    const bg = ctx.createLinearGradient(0, 0, 1920, 1080);
+    bg.addColorStop(0, '#090d16');
+    bg.addColorStop(1, '#0f172a');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 1920, 1080);
+
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(40, 40, 1840, 1000);
+
+    const title = document.getElementById('repTitleInput')?.value || 'RELATÓRIO OPERACIONAL | CSC 504';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 42px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(title, 80, 110);
+
+    ctx.fillStyle = '#818cf8';
+    ctx.font = '22px "Plus Jakarta Sans", sans-serif';
+    const dateText = state.day ? `Data de Referência: ${new Date(state.day + 'T00:00:00').toLocaleDateString('pt-BR')}` : 'Sem data selecionada';
+    ctx.fillText(dateText, 80, 150);
+
+    let totOrd = 0, totIt = 0;
+    const users = state.data?.users || {};
+    for (const u of state.selectedUsers) {
+        if (users[u]) {
+            totOrd += getUserOrd(users[u]).reduce((a, b) => a + b, 0);
+            totIt += (users[u].it || []).reduce((a, b) => a + b, 0);
+        }
+    }
+
+    const ratioPçsPed = totOrd > 0 ? (totIt / totOrd).toFixed(2) : '0.00';
+
+    const kpis = [
+        { label: 'PEDIDOS TOTAIS', val: totOrd.toLocaleString('pt-BR'), color: '#818cf8' },
+        { label: 'ITENS PROCESSADOS', val: totIt.toLocaleString('pt-BR'), color: '#34d399' },
+        { label: 'MÉDIA PEÇAS / PEDIDO', val: `${ratioPçsPed} pç/ped`, color: '#38bdf8' },
+        { label: 'OPERADORES ATIVOS', val: state.selectedUsers.size.toString(), color: '#f59e0b' }
+    ];
+
+    kpis.forEach((kpi, idx) => {
+        const x = 80 + idx * 430;
+        const y = 200;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, 400, 130, 16);
+        else ctx.rect(x, y, 400, 130);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(kpi.label, x + 24, y + 40);
+
+        ctx.fillStyle = kpi.color;
+        ctx.font = 'extrabold 36px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(kpi.val, x + 24, y + 95);
+    });
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('Top 5 Operadores em Destaque', 80, 400);
+
+    const sortedUsers = Object.entries(users)
+        .filter(([u]) => state.selectedUsers.has(u))
+        .map(([u, v]) => ({ displayName: getUserDisplayName(u), ord: getUserOrd(v).reduce((a, b) => a + b, 0), it: v.it.reduce((a, b) => a + b, 0) }))
+        .sort((a, b) => b.ord - a.ord)
+        .slice(0, 5);
+
+    sortedUsers.forEach((usr, idx) => {
+        const y = 450 + idx * 75;
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.5)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(80, y, 1760, 60, 12);
+        else ctx.rect(80, y, 1760, 60);
+        ctx.fill();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`${idx + 1}º  ${usr.displayName}`, 110, y + 38);
+
+        ctx.fillStyle = '#818cf8';
+        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`${usr.ord.toLocaleString('pt-BR')} pedidos`, 1200, y + 38);
+
+        ctx.fillStyle = '#34d399';
+        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`${usr.it.toLocaleString('pt-BR')} itens`, 1500, y + 38);
+    });
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '16px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('Gerado via Painel CSC 504 NextGen — Automação de Inteligência Operacional', 80, 1000);
+}
+
+// UI Initialization Handlers
+function initTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('[data-panel]');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-tab');
+            state.activeTab = target;
+
+            tabBtns.forEach(b => {
+                b.classList.remove('bg-brand-600', 'text-white', 'shadow-md');
+                b.classList.add('text-slate-400');
+            });
+            btn.classList.add('bg-brand-600', 'text-white', 'shadow-md');
+            btn.classList.remove('text-slate-400');
+
+            panels.forEach(p => {
+                if (p.getAttribute('data-panel') === target) {
+                    p.classList.remove('hidden');
+                } else {
+                    p.classList.add('hidden');
+                }
+            });
+
+            renderApp();
+        });
+    });
+}
+
+function initDrawerAndTheme() {
+    const drawer = document.getElementById('sidebarDrawer');
+    const overlay = document.getElementById('drawerOverlay');
+    const aside = drawer.querySelector('aside');
+    const toggleBtn = document.getElementById('toggleDrawerBtn');
+    const closeBtn = document.getElementById('closeDrawerBtn');
+
+    const openDrawer = () => {
+        drawer.classList.remove('pointer-events-none', 'opacity-0');
+        aside.classList.remove('translate-x-full');
+        renderCalendar();
+    };
+
+    const closeDrawer = () => {
+        drawer.classList.add('pointer-events-none', 'opacity-0');
+        aside.classList.add('translate-x-full');
+    };
+
+    toggleBtn.onclick = openDrawer;
+    closeBtn.onclick = closeDrawer;
+    overlay.onclick = closeDrawer;
+
+    const themeBtn = document.getElementById('themeToggleBtn');
+    themeBtn.onclick = () => {
+        const html = document.documentElement;
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            html.classList.add('light');
+            themeBtn.innerHTML = '<i class="fa-solid fa-sun text-amber-400 text-base"></i>';
+        } else {
+            html.classList.remove('light');
+            html.classList.add('dark');
+            themeBtn.innerHTML = '<i class="fa-solid fa-moon text-base"></i>';
+        }
+    };
+}
+
+function populateHourSelectors() {
+    const sSel = document.getElementById('startHourSelect');
+    const eSel = document.getElementById('endHourSelect');
+
+    sSel.innerHTML = '';
+    eSel.innerHTML = '';
+
+    for (let h = 0; h < 24; h++) {
+        const hStr = `${String(h).padStart(2, '0')}h`;
+        
+        const optS = document.createElement('option');
+        optS.value = h;
+        optS.innerText = hStr;
+        optS.className = 'bg-slate-900';
+        if (h === state.startHour) optS.selected = true;
+        sSel.appendChild(optS);
+
+        const optE = document.createElement('option');
+        optE.value = h;
+        optE.innerText = hStr;
+        optE.className = 'bg-slate-900';
+        if (h === state.endHour) optE.selected = true;
+        eSel.appendChild(optE);
+    }
+
+    sSel.onchange = e => {
+        state.startHour = parseInt(e.target.value, 10);
+        renderApp();
+    };
+
+    eSel.onchange = e => {
+        state.endHour = parseInt(e.target.value, 10);
+        renderApp();
+    };
+}
+
+function initInteractiveGoalCards() {
+    const elInT1 = document.getElementById('inputMetaT1');
+    const elInT2 = document.getElementById('inputMetaT2');
+    const elInT3 = document.getElementById('inputMetaT3');
+    const elInGeral = document.getElementById('inputMetaGeral');
+
+    if (elInT1) elInT1.oninput = () => { state.manualGoals.t1 = elInT1.value !== '' ? Number(elInT1.value) : null; renderApp(); };
+    if (elInT2) elInT2.oninput = () => { state.manualGoals.t2 = elInT2.value !== '' ? Number(elInT2.value) : null; renderApp(); };
+    if (elInT3) elInT3.oninput = () => { state.manualGoals.t3 = elInT3.value !== '' ? Number(elInT3.value) : null; renderApp(); };
+    if (elInGeral) elInGeral.oninput = () => { state.manualGoals.geral = elInGeral.value !== '' ? Number(elInGeral.value) : null; renderApp(); };
+
+    document.getElementById('btnAutoMetaT1').onclick = () => { state.manualGoals.t1 = null; renderApp(); };
+    document.getElementById('btnAutoMetaT2').onclick = () => { state.manualGoals.t2 = null; renderApp(); };
+    document.getElementById('btnAutoMetaT3').onclick = () => { state.manualGoals.t3 = null; renderApp(); };
+    document.getElementById('btnAutoMetaGeral').onclick = () => { state.manualGoals.geral = null; renderApp(); };
+
+    document.getElementById('btnResetAllOrderGoals').onclick = () => {
+        state.manualGoals = { t1: null, t2: null, t3: null, geral: null };
+        renderApp();
+        showToast('Metas manuais de pedidos redefinidas!', 'info');
+    };
+
+    const elInPT1 = document.getElementById('inputMetaPeçasT1');
+    const elInPT2 = document.getElementById('inputMetaPeçasT2');
+    const elInPT3 = document.getElementById('inputMetaPeçasT3');
+    const elInPGeral = document.getElementById('inputMetaPeçasGeral');
+
+    if (elInPT1) elInPT1.oninput = () => { state.manualItemGoals.t1 = elInPT1.value !== '' ? Number(elInPT1.value) : null; renderApp(); };
+    if (elInPT2) elInPT2.oninput = () => { state.manualItemGoals.t2 = elInPT2.value !== '' ? Number(elInPT2.value) : null; renderApp(); };
+    if (elInPT3) elInPT3.oninput = () => { state.manualItemGoals.t3 = elInPT3.value !== '' ? Number(elInPT3.value) : null; renderApp(); };
+    if (elInPGeral) elInPGeral.oninput = () => { state.manualItemGoals.geral = elInPGeral.value !== '' ? Number(elInPGeral.value) : null; renderApp(); };
+
+    document.getElementById('btnAutoMetaPeçasT1').onclick = () => { state.manualItemGoals.t1 = null; renderApp(); };
+    document.getElementById('btnAutoMetaPeçasT2').onclick = () => { state.manualItemGoals.t2 = null; renderApp(); };
+    document.getElementById('btnAutoMetaPeçasT3').onclick = () => { state.manualItemGoals.t3 = null; renderApp(); };
+    document.getElementById('btnAutoMetaPeçasGeral').onclick = () => { state.manualItemGoals.geral = null; renderApp(); };
+
+    document.getElementById('btnResetAllItemGoals').onclick = () => {
+        state.manualItemGoals = { t1: null, t2: null, t3: null, geral: null };
+        renderApp();
+        showToast('Metas manuais de peças redefinidas!', 'info');
+    };
+}
+
+function initFiltersAndControls() {
+    document.getElementById('turnoSelect').onchange = e => {
+        state.turno = e.target.value;
+        renderApp();
+    };
+
+    const userSortSel = document.getElementById('userSortSelect');
+    if (userSortSel) {
+        userSortSel.value = state.userSort || 'orders_desc';
+        userSortSel.onchange = e => {
+            state.userSort = e.target.value;
+            renderIndividualTab();
+            showToast('Ordenação de operadores atualizada!', 'info');
+        };
+    }
+
+    document.getElementById('btnDedupOE').onclick = () => {
+        state.dedupOE = !state.dedupOE;
+        document.getElementById('lblDedupOE').innerText = state.dedupOE ? '1x Apenas' : 'Todas Repetidas';
+        showToast(state.dedupOE ? 'Modo OE Única ativado' : 'Modo Contagem Total de Registros ativado', 'info');
+        renderApp();
+    };
+
+    document.getElementById('btnClearFilters').onclick = () => {
+        state.manualGoals = { t1: null, t2: null, t3: null, geral: null };
+        state.manualItemGoals = { t1: null, t2: null, t3: null, geral: null };
+        
+        renderApp();
+        showToast('Metas manuais de pedidos e peças apagadas!', 'success');
+    };
+
+    document.getElementById('userSearchInput').oninput = () => renderUserChips();
+
+    document.getElementById('btnSelAll').onclick = () => {
+        if (!state.data) return;
+        state.selectedUsers = new Set(Object.keys(state.data.users || {}));
+        renderApp();
+    };
+
+    document.getElementById('btnSelNone').onclick = () => {
+        state.selectedUsers.clear();
+        renderApp();
+    };
+
+    const filterShift = shiftTarget => {
+        if (!state.data) return;
+        state.selectedUsers.clear();
+        for (const [u, v] of Object.entries(state.data.users || {})) {
+            if (userTurno(getUserOrd(v)) === shiftTarget) state.selectedUsers.add(u);
+        }
+        renderApp();
+    };
+
+    document.getElementById('btnSelT1').onclick = () => filterShift('T1');
+    document.getElementById('btnSelT2').onclick = () => filterShift('T2');
+    document.getElementById('btnSelT3').onclick = () => filterShift('T3');
+
+    document.getElementById('chartTypeSelect').onchange = e => {
+        state.chartType = e.target.value;
+        renderVisaoGeralTab();
+    };
+
+    document.getElementById('ocioLimitMin').oninput = () => renderOciosidades();
+
+    document.getElementById('btnAutoDetectLogins').onclick = () => {
+        if (!state.data) {
+            showToast('Nenhum dado importado para sincronizar.', 'error');
+            return;
+        }
+        Object.keys(state.data.users || {}).forEach(u => {
+            if (!userMappings[u]) {
+                userMappings[u] = { displayName: u, metaOrd: 25, metaIt: 100 };
+            }
+        });
+        saveUserMappingsToStorage(userMappings);
+        renderLoginUsersTab();
+        showToast('Logins sincronizados com sucesso!', 'success');
+    };
+}
+
+function initBackupOperations() {
+    const handleExport = async () => {
+        const all = await dbAll();
+        const payload = {
+            days: all,
+            userMappings: userMappings
+        };
+        const json = JSON.stringify(payload, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `backup_csc504_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        showToast('Backup exportado com sucesso!', 'success');
+    };
+
+    document.getElementById('btnExportBackup').onclick = handleExport;
+
+    const handleImport = async e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        try {
+            const txt = await f.text();
+            const data = JSON.parse(txt);
+            if (data.days && Array.isArray(data.days)) {
+                for (const item of data.days) {
+                    if (item.date && item.users) await dbPut(item);
+                }
+                if (data.userMappings) {
+                    Object.assign(userMappings, data.userMappings);
+                    saveUserMappingsToStorage(userMappings);
+                }
+                showToast('Backup e mapeamentos restaurados!', 'success');
+                await loadCurrentDayData();
+                await renderCalendar();
+            } else if (Array.isArray(data)) {
+                for (const item of data) {
+                    if (item.date && item.users) await dbPut(item);
+                }
+                showToast('Backup restaurado!', 'success');
+                await loadCurrentDayData();
+                await renderCalendar();
+            }
+        } catch (err) {
+            showToast('Erro ao ler arquivo de backup.', 'error');
+        }
+    };
+
+    document.getElementById('importBackupInput').onchange = handleImport;
+
+    document.getElementById('btnClearDatabase').onclick = () => {
+        if (confirm('Tem certeza que deseja apagar o histórico local salvo no navegador?')) {
+            dbClear().then(() => {
+                state.day = null;
+                state.data = null;
+                renderApp();
+                renderCalendar();
+                showToast('Banco de dados local limpo!', 'info');
+            });
+        }
+    };
+}
+
+function initCsvExports() {
+    const exportTableToCsv = (tableId, filename) => {
+        const tbl = document.getElementById(tableId);
+        if (!tbl) return;
+        let csv = '\uFEFF';
+        for (const row of tbl.rows) {
+            const cols = Array.from(row.cells).map((c, colIdx) => {
+                let text = c.innerText;
+                if (colIdx === 0) {
+                    const nameSpan = c.querySelector('.font-bold');
+                    if (nameSpan) {
+                        text = nameSpan.innerText;
+                    } else {
+                        text = text.split('\n')[0];
+                    }
+                }
+                text = text.trim().replace(/"/g, '""');
+                return `"${text}"`;
+            });
+            csv += cols.join(';') + '\n';
+        }
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${filename}_${state.day || 'export'}.csv`;
+        a.click();
+        showToast('Tabela exportada para CSV!', 'success');
+    };
+
+    document.getElementById('btnExportOrdCsv').onclick = () => exportTableToCsv('matrixOrdersTable', 'matriz_pedidos_hxh');
+    document.getElementById('btnExportItCsv').onclick = () => exportTableToCsv('matrixItemsTable', 'matriz_itens_hxh');
+}
+
+function initTraceabilityTools() {
+    document.getElementById('btnSearchToolItem').onclick = () => {
+        const query = (document.getElementById('toolItemCodeInput').value || '').trim().toLowerCase();
+        const resEl = document.getElementById('toolItemResult');
+        if (!query) {
+            resEl.innerHTML = '<span class="text-rose-400">Digite um código de item válido.</span>';
+            return;
+        }
+
+        const items = state.data?.items || [];
+        const matches = items.filter(i => i.it.toLowerCase().includes(query));
+
+        if (!matches.length) {
+            resEl.innerHTML = '<p class="text-slate-400 mt-2">Nenhum registro encontrado para este item hoje.</p>';
+            return;
+        }
+
+        let html = `<div class="mt-3 space-y-2 max-h-48 overflow-y-auto">`;
+        matches.forEach(m => {
+            const displayName = getUserDisplayName(m.u);
+            const timeStr = `${Math.floor(m.s/3600).toString().padStart(2,'0')}:${Math.floor((m.s%3600)/60).toString().padStart(2,'0')}`;
+            html += `<div class="bg-slate-950 p-2.5 rounded-xl border border-white/5 flex justify-between items-center text-xs">
+                <div>
+                    <span class="font-bold text-white block">${m.it}</span>
+                    <span class="text-slate-500">Operador: ${displayName} (${m.u}) | OE: ${m.oe || '—'}</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-emerald-400 font-bold block">${m.uz || 'Sem UZ'}</span>
+                    <span class="text-slate-500">${timeStr}h</span>
+                </div>
+            </div>`;
+        });
+        resEl.innerHTML = html + '</div>';
+    };
+
+    document.getElementById('btnSearchToolUz').onclick = () => {
+        const query = (document.getElementById('toolUzInput').value || '').trim().toLowerCase();
+        const resEl = document.getElementById('toolUzResult');
+        if (!query) {
+            resEl.innerHTML = '<span class="text-rose-400">Digite uma UZ válida.</span>';
+            return;
+        }
+
+        const items = state.data?.items || [];
+        const matches = items.filter(i => i.uz.toLowerCase().includes(query));
+
+        if (!matches.length) {
+            resEl.innerHTML = '<p class="text-slate-400 mt-2">Nenhum item associado a esta UZ hoje.</p>';
+            return;
+        }
+
+        let html = `<div class="mt-3 space-y-2 max-h-48 overflow-y-auto">`;
+        matches.forEach(m => {
+            const displayName = getUserDisplayName(m.u);
+            html += `<div class="bg-slate-950 p-2.5 rounded-xl border border-white/5 flex justify-between items-center text-xs">
+                <div>
+                    <span class="font-bold text-white block">${m.it}</span>
+                    <span class="text-slate-500">Operador: ${displayName} (${m.u})</span>
+                </div>
+                <span class="text-brand-400 font-bold">${m.uz}</span>
+            </div>`;
+        });
+        resEl.innerHTML = html + '</div>';
+    };
+}
+
+function initReportActions() {
+    document.getElementById('btnRefreshReport').onclick = () => {
+        renderReportCanvas();
+        showToast('Relatório Canvas atualizado!', 'info');
+    };
+
+    document.getElementById('btnDownloadReportPng').onclick = () => {
+        const canvas = document.getElementById('reportCanvas');
+        if (!canvas) return;
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `relatorio_executivo_${state.day || 'csc504'}.png`;
+        a.click();
+        showToast('Relatório HD baixado em PNG!', 'success');
+    };
+}
+
+// Synthetic Demo Data Generator
+async function loadDemoData() {
+    document.getElementById('loaderOverlay').classList.remove('hidden');
+    document.getElementById('loaderOverlay').classList.add('flex');
+    document.getElementById('loaderText').innerText = 'Gerando dados demo do CSC...';
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const loginsList = [
+        '001194433 - Camila Pinheiro',
+        '001120564 - WESLEY SILVA',
+        '001218830 - Ariane de Lau Ferreira',
+        '001211382 - Kerolyn Silva',
+        '001217530 - Eduarda Helena da Silva',
+        '001218915 - Joyce Vila Nova Silva',
+        '001204457 - Maria Goretty Moura da Rocha',
+        '001216689 - Wesley Kawan Vilela da Silva',
+        '001204554 - Larissa Lima da Silva',
+        '001219190 - Ana Maria Clara Ferreira dos Santos'
+    ];
+
+    const initialDisplayNames = ['Camila', 'Wesley', 'Ariane', 'Matheus', 'Eduarda', 'João', 'Luiz', 'Kawan', 'Larissa', 'Ana'];
+
+    loginsList.forEach((login, idx) => {
+        if (!userMappings[login]) {
+            userMappings[login] = { displayName: initialDisplayNames[idx] || login, metaOrd: 25, metaIt: 100 };
+        }
+    });
+    saveUserMappingsToStorage(userMappings);
+
+    const mockUsers = {};
+    const mockItems = [];
+
+    loginsList.forEach((login, idx) => {
+        const shiftType = idx < 4 ? 'T1' : (idx < 7 ? 'T2' : 'T3');
+        const startH = shiftType === 'T1' ? 6 : (shiftType === 'T2' ? 14 : 22);
+        
+        const ord = Array(24).fill(0);
+        const it = Array(24).fill(0);
+        const secs = [];
+        const rawRows = [];
+
+        for (let hOff = 0; hOff < 8; hOff++) {
+            const h = (startH + hOff) % 24;
+            const pCount = Math.floor(Math.random() * 20) + 18;
+            const iCount = pCount * (Math.floor(Math.random() * 4) + 3);
+
+            ord[h] = pCount;
+            it[h] = iCount;
+
+            for (let p = 0; p < pCount; p++) {
+                const s = h * 3600 + p * 120 + Math.floor(Math.random() * 30);
+                secs.push(s);
+                const oeCode = `OE-${10000 + idx * 100 + p}`;
+                rawRows.push({ h, oe: oeCode, qty: Math.floor(iCount / pCount), s });
+
+                if (p % 3 === 0) {
+                    mockItems.push({
+                        it: `ITEM-${8800 + (p * 7) % 500}`,
+                        uz: `UZ-${101 + (p % 12)}`,
+                        u: login,
+                        s: s,
+                        oe: oeCode
+                    });
+                }
+            }
+        }
+
+        secs.sort((a, b) => a - b);
+        mockUsers[login] = { ord, it, secs, rawRows };
+    });
+
+    await dbPut({ date: todayIso, users: mockUsers, items: mockItems });
+    state.day = todayIso;
+
+    showToast('Dados de demonstração gerados com sucesso!', 'success');
+    document.getElementById('loaderOverlay').classList.add('hidden');
+    document.getElementById('loaderOverlay').classList.remove('flex');
+
+    await loadCurrentDayData();
+    await renderCalendar();
+}
+
+document.getElementById('btnLoadDemoData').onclick = loadDemoData;
+
+// Bootstrapping Event
+window.addEventListener('DOMContentLoaded', async () => {
+    initTabs();
+    initDrawerAndTheme();
+    populateHourSelectors();
+    initInteractiveGoalCards();
+    initFiltersAndControls();
+    initBackupOperations();
+    initCsvExports();
+    initTraceabilityTools();
+    initReportActions();
+
+    const all = await dbAll();
+    if (all.length > 0) {
+        all.sort((a, b) => a.date.localeCompare(b.date));
+        state.day = all[all.length - 1].date;
+    }
+
+    await loadCurrentDayData();
+    await renderCalendar();
+});
+</script>
+</body>
+</html>
